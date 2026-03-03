@@ -1,0 +1,76 @@
+{
+  "metadata": {
+    "version": "0.1.0",
+    "description": "Clinical IR Framework - Parameter Configuration",
+    "epistemic_types": {
+      "A": "Theoretically derived from external evidence - fixed",
+      "B": "Informed design choice - subject to sensitivity analysis",
+      "C": "Bold conjecture - test and report"
+    }
+  },
+
+  "temporal_decay": {
+    "_type": "A",
+    "_derivation": "Citation half-life analysis from bibliometrics literature",
+    "lambda": {
+      "infectious_disease": 0.20,
+      "oncology": 0.15,
+      "cardiology": 0.10,
+      "pbm": 0.12,
+      "surgery": 0.08,
+      "anatomy": 0.02
+    },
+    "default": 0.12
+  },
+
+  "evidence_weights": {
+    "_type": "A",
+    "_derivation": "Meta-epidemiological studies comparing effect estimates across study designs",
+    "weights": {
+      "systematic_review": 1.00,
+      "rct": 0.85,
+      "controlled_observational": 0.65,
+      "uncontrolled_observational": 0.45,
+      "expert_opinion": 0.25
+    }
+  },
+
+  "component_weights": {
+    "_type": "B",
+    "_derivation": "Informed design choice",
+    "_sensitivity": [[0.4, 0.5, 0.6], [0.2, 0.3, 0.4], [0.1, 0.2, 0.3]],
+    "alpha_topic": 0.50,
+    "alpha_apply": 0.30,
+    "alpha_action": 0.20
+  },
+
+  "hybrid_search": {
+    "_type": "B",
+    "_sensitivity": [0.2, 0.4, 0.6, 0.8],
+    "beta": 0.40
+  },
+
+  "redundancy": {
+    "_type": "B",
+    "_sensitivity": [0.1, 0.3, 0.5],
+    "lambda": 0.30
+  },
+
+  "embedding": {
+    "_type": "B",
+    "model": "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext",
+    "dimension": 768,
+    "pooling": "mean",
+    "max_length": 512
+  },
+
+  "evaluation": {
+    "_type": "C",
+    "thresholds": {
+      "precision_at_10": 0.75,
+      "decision_concordance": 0.80
+    },
+    "primary_outcome": "decision_concordance",
+    "refutation_threshold": 0.65
+  }
+}
