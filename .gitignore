@@ -1,0 +1,15 @@
+# Evaluation data and caches — must never enter commit history
+.venv/
+datasets/
+.cache/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# OS
+.DS_Store

@@ -78,7 +78,13 @@ score = clinical_relevance(doc, query)
 
 ## Status
 
-Implementation complete. Awaiting evaluation on real clinical relevance judgments (TREC Clinical Decision Support or custom annotation).
+**Evaluated on BEIR NFCorpus (test split, 323 queries), 2026-08-23 — pre-registered criterion NOT met.**
+
+The full multidimensional relevance pipeline scored **NDCG@10 = 0.071** against a **BM25 baseline of 0.310** on the same data and metric — a **77% relative degradation**, not the ≥5% improvement the framework registered as its falsification threshold (95% CIs [0.056–0.085] vs [0.277–0.345], non-overlapping). By the framework's own rule that "equal to counts as failure," **the core conjecture (Falsification Criterion 1) is refuted on this dataset** — the complex scoring performed far worse than the simple baseline, not merely equal to it.
+
+The **temporal-decay** and **evidence-weight** contributions (Criteria 2 and 3) **could not be evaluated** on NFCorpus: it ships no publication dates and no study-type metadata. Those two criteria remain **untested, not passed**.
+
+See [`evals/report.md`](evals/report.md) for the full results, ablation table, and method. Earlier synthetic-data "PASS" output should not be read as evidence for the framework.
 
 ## License
 
