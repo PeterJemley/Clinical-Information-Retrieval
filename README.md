@@ -78,13 +78,57 @@ score = clinical_relevance(doc, query)
 
 ## Status
 
-**Evaluated on BEIR NFCorpus (test split, 323 queries), 2026-08-23 — pre-registered criterion NOT met.**
+**Evaluated 2026-08-23. The primary falsification criterion failed.**
 
-The full multidimensional relevance pipeline scored **NDCG@10 = 0.071** against a **BM25 baseline of 0.310** on the same data and metric — a **77% relative degradation**, not the ≥5% improvement the framework registered as its falsification threshold (95% CIs [0.056–0.085] vs [0.277–0.345], non-overlapping). By the framework's own rule that "equal to counts as failure," **the core conjecture (Falsification Criterion 1) is refuted on this dataset** — the complex scoring performed far worse than the simple baseline, not merely equal to it.
+On BEIR/NFCorpus (3,633 documents; 323 test queries with graded human relevance
+judgments), the full clinical relevance function scored **NDCG@10 = 0.071** against a
+**BM25 baseline of 0.310** — 77% below the baseline, with non-overlapping 95%
+confidence intervals. The registered bar was ≥5% *above* BM25. By this framework's own
+criterion, that "equal to counts as failure," the core conjecture is refuted on this
+dataset. It did not narrowly miss; it lost heavily to the simple baseline it was built
+to beat.
 
-The **temporal-decay** and **evidence-weight** contributions (Criteria 2 and 3) **could not be evaluated** on NFCorpus: it ships no publication dates and no study-type metadata. Those two criteria remain **untested, not passed**.
+The other two criteria **could not be evaluated on this dataset**, and remain untested
+rather than passed:
 
-See [`evals/report.md`](evals/report.md) for the full results, ablation table, and method. Earlier synthetic-data "PASS" output should not be read as evidence for the framework.
+- **Temporal decay.** NFCorpus carries no publication dates, verified across all 3,633
+  documents. τ was neutralised to 1.0 throughout, so the temporal ablation is identical
+  to the full system. There was no temporal signal to test.
+- **Evidence weighting.** NFCorpus carries no study-type metadata. Evidence levels were
+  assigned by this repository's own keyword classifier — a proxy, which measures the
+  heuristic rather than the evidence hierarchy. NFCorpus relevance judgments also reward
+  topical relevance, so a perfect evidence signal would have had no ground truth to
+  improve against.
+
+### Correction to a prior claim in this file
+
+This section previously read "Implementation complete." That was inaccurate.
+`config.json` names PubMedBERT as the encoder, but no code in this repository loaded any
+embedding model; the module self-tests ran on `np.random.randn` vectors. The evaluation
+harness had to supply the missing embedding step in order to run at all. The
+implementation was incomplete at the time the falsification criteria were registered,
+and that was not visible until something attempted to use it end to end.
+
+Two further defects surfaced by the run, not modified: the shipped test suite does not
+collect under `pytest` (relative imports against a repo-root `__init__.py`), and
+`tests/test_evaluate.py` does a bare `import evaluate`.
+
+### Where the results are
+
+- Full results, ablations, and the components that could not be evaluated:
+  [`evals/report.md`](evals/report.md)
+
+### What comes next
+
+Not a re-run on a more favourable dataset. Choosing a corpus after seeing this result
+would be selection by outcome, and would void the value of having registered the
+criterion in advance.
+
+The next test isolates the most strongly supported explanation: the topical component
+alone, with a similarity-trained encoder in place of mean pooling, measured against BM25
+on the same data. If it still loses, the semantic path is the problem. If it wins, the
+instrument fault is isolated and the composite becomes worth testing. That test will be
+registered before it is run.
 
 ## License
 
