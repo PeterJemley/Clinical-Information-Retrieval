@@ -41,7 +41,7 @@ and three of the four dimensions never entered the measurement at all.
 
 *The apparatus was missing a component when it was switched on.*
 
-`config.json` specifies PubMedBERT as the encoder. No code in the repository loaded any
+`default.json` specifies PubMedBERT as the encoder. No code in the repository loaded any
 embedding model; the module self-tests ran on `np.random.randn` vectors. The evaluation
 harness supplied the missing embedding step in order to run at all.
 
