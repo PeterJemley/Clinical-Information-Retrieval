@@ -120,6 +120,30 @@ collect under `pytest` (relative imports against a repo-root `__init__.py`), and
 - A companion note separating what the result establishes from what it does not:
   [`evals/what-the-failure-establishes.md`](evals/what-the-failure-establishes.md)
 
+### On authorship
+
+Three of the commits in this repository name an AI coding agent as co-author. The
+division of work is visible in the log.
+
+The framework and the criteria that would refute it are two commits from March 2026 —
+`b27b17e` on the 3rd and `b01a3be` on the 26th, 1,260 lines added and none removed,
+neither carrying a co-author. Those two commits are the whole of the system under test:
+the relevance function, the temporal and evidence modules, the retrieval baseline, the
+parameter file, and `FRAMEWORK.md`, which states the falsification criteria.
+
+The agent's three commits are dated 23 and 26 August. They add `evals/` and edit this
+README. They modify no file that defines the framework — not `relevance.py`,
+`temporal.py`, `evidence.py`, `retrieval.py`, or the parameter file. The system under
+test and the apparatus that tested it were written nearly six months apart, and the
+second did not alter the first.
+
+Also mine: the instruction to run the evaluation and publish the outcome whichever way it
+came out, and the decision against re-running on a corpus chosen after seeing the result.
+
+Execution earned a finding of its own. The run exposed a defect that inspection had not —
+a language model named in the configuration that no code in this repository ever loaded.
+Defects of that kind stay invisible until something attempts to use the thing end to end.
+
 ### What comes next
 
 Not a re-run on a more favourable dataset. Choosing a corpus after seeing this result
