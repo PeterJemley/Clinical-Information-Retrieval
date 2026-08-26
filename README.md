@@ -117,6 +117,8 @@ collect under `pytest` (relative imports against a repo-root `__init__.py`), and
 
 - Full results, ablations, and the components that could not be evaluated:
   [`evals/report.md`](evals/report.md)
+- A companion note separating what the result establishes from what it does not:
+  [`evals/what-the-failure-establishes.md`](evals/what-the-failure-establishes.md)
 
 ### What comes next
 
