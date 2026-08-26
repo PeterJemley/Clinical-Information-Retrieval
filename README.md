@@ -27,7 +27,7 @@ We distinguish three types of claims:
 | `relevance.py` | Core relevance function R(d,q) |
 | `retrieval.py` | BM25 baseline + hybrid search |
 | `evaluate.py` | Metrics and conjecture testing |
-| `config.json` | All parameters with epistemic types |
+| `default.json` | All parameters with epistemic types |
 
 ## Relevance Function
 
@@ -103,7 +103,7 @@ rather than passed:
 ### Correction to a prior claim in this file
 
 This section previously read "Implementation complete." That was inaccurate.
-`config.json` names PubMedBERT as the encoder, but no code in this repository loaded any
+`default.json` names PubMedBERT as the encoder, but no code in this repository loaded any
 embedding model; the module self-tests ran on `np.random.randn` vectors. The evaluation
 harness had to supply the missing embedding step in order to run at all. The
 implementation was incomplete at the time the falsification criteria were registered,
@@ -112,6 +112,15 @@ and that was not visible until something attempted to use it end to end.
 Two further defects surfaced by the run, not modified: the shipped test suite does not
 collect under `pytest` (relative imports against a repo-root `__init__.py`), and
 `tests/test_evaluate.py` does a bare `import evaluate`.
+
+**A second correction, 26 August 2026.** This README, `FRAMEWORK.md` and the companion
+note each described a parameter file named `config.json`. The repository has never
+contained one. The file is `default.json`, and no code here opens it under either name.
+This is the defect recorded above, one level further down: the configuration was written
+as a design and never connected to anything, its filename included. The documents that
+describe the system are corrected. `evals/report.md` and `evals/run_eval.py` record what
+was run on 23 August and are left as written, because the record is not edited after the
+run.
 
 ### Where the results are
 
