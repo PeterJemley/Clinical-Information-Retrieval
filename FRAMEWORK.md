@@ -194,7 +194,7 @@ This is why we distinguish Type A parameters (genuinely derivable) from Type C c
 
 ```
 clinical_ir/
-├── config.json      # All parameters with epistemic types
+├── default.json     # All parameters with epistemic types
 ├── temporal.py      # Temporal decay (Type A)
 ├── evidence.py      # Evidence hierarchy (Type A)
 ├── relevance.py     # Core R(d,q) function
