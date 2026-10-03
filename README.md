@@ -113,6 +113,11 @@ Two further defects surfaced by the run, not modified: the shipped test suite do
 collect under `pytest` (relative imports against a repo-root `__init__.py`), and
 `tests/test_evaluate.py` does a bare `import evaluate`.
 
+**Fixed 3 October 2026.** `pyproject.toml` now maps the repository root to the `clinical_ir`
+package, so `pip install -e .` provides it. `test_clinical_ir.py` moved into `tests/`, and
+both test files collect and pass under `pytest` (8.0 or later, run from the repository
+root). No framework file was moved or changed.
+
 **A second correction, 26 August 2026.** This README, `FRAMEWORK.md` and the companion
 note each described a parameter file named `config.json`. The repository has never
 contained one. The file is `default.json`, and no code here opens it under either name.

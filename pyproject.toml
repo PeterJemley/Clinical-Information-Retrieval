@@ -11,7 +11,15 @@ requires-python = ">=3.9"
 dependencies = ["numpy>=1.20.0"]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0"]
+dev = ["pytest>=8.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The repo root is the clinical_ir package and holds its __init__.py; stop pytest from
+# collecting the root as a test package, which fails when the checkout folder name is
+# not a valid Python identifier (e.g. "Clinical-Information-Retrieval").
+addopts = "--confcutdir=tests"
+
+[tool.setuptools]
+package-dir = {"clinical_ir" = "."}
+packages = ["clinical_ir"]
