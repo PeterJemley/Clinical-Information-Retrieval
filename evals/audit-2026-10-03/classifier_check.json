@@ -1,0 +1,55 @@
+{
+  "n_docs": 3633,
+  "assigned_levels": {
+    "RCT": 491,
+    "CONTROLLED_OBSERVATIONAL": 345,
+    "UNCONTROLLED_OBSERVATIONAL": 2561,
+    "SYSTEMATIC_REVIEW": 220,
+    "EXPERT_OPINION": 16
+  },
+  "default_uncontrolled_observational_no_keyword": 2510,
+  "first_firing_keyword": {
+    "(no keyword: default)": 2510,
+    "randomized": 314,
+    "cohort": 256,
+    "systematic review": 124,
+    "case-control": 87,
+    "meta-analysis": 85,
+    "clinical trial": 74,
+    "randomised": 53,
+    "rct": 50,
+    "retrospective": 21,
+    "case report": 19,
+    "consensus": 15,
+    "case series": 11,
+    "cochrane": 11,
+    "propensity": 2,
+    "expert opinion": 1
+  },
+  "substring_only_matches": {
+    "clinical trial": 47,
+    "rct": 49,
+    "cohort": 17,
+    "systematic review": 15,
+    "retrospective": 9,
+    "case report": 4
+  },
+  "rct_keyword": {
+    "docs": 50,
+    "docs_without_rct_word_or_trial_registration": 46,
+    "docs_containing_word": {
+      "infarction": 33,
+      "infarctions": 7,
+      "antarctic": 3,
+      "isrctn35739639": 3,
+      "infarct": 2,
+      "arctic": 2,
+      "infarcts": 1,
+      "hrct": 1,
+      "uninfarcted": 1,
+      "rct": 1,
+      "infarctus": 1,
+      "antarctica": 1
+    }
+  }
+}

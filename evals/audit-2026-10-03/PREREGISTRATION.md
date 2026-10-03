@@ -126,4 +126,20 @@ as a deviation with the reason, and the affected results are labelled explorator
 
 ## Deviation log
 
-- (none yet)
+- 2026-10-03 21:23Z: the first reproduction attempt stopped before computing anything,
+  because the encoder download goes through HuggingFace's Xet backend, which this
+  environment blocks. Rerun with `HF_HUB_DISABLE_XET=1` (plain HTTPS download, same
+  revision). Seen results before the change: no. Effect: none.
+- 2026-10-03: `audit.py` ran from the working tree and was committed afterwards, unchanged.
+  Its sha256 at run time is in `manifest.json`. Seen results before committing: yes.
+  Effect: none on results; noted for provenance.
+- 2026-10-03 21:47Z: added `exploratory.py` (E1, E2) after seeing D1–D8, to explain the
+  missed D2 overlap prediction and to test whether the composite score can carry a strong
+  topical signal. Seen results before the change: yes. Effect: E1 and E2 are exploratory.
+- 2026-10-03: added `classifier_check.py`, which counts what the evidence keyword
+  classifier assigns. Descriptive. Seen results before the change: yes. Effect:
+  exploratory.
+- 2026-10-03: E1 showed that the D2 overlap measure is ill-defined for queries where BM25
+  matches fewer than 100 documents, because `BM25.search` pads its list with zero-score
+  documents in index order. This was found after the results were seen. The
+  preregistered D2 verdict ("mixed") is reported unchanged.

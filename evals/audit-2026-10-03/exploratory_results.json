@@ -1,0 +1,16 @@
+{
+  "E1": {
+    "median_docs_with_nonzero_bm25": 405.0,
+    "queries_with_fewer_than_100_nonzero": 127,
+    "queries_with_zero_nonzero": 25,
+    "mean_overlap_when_>=100_nonzero": 0.9751020408163266,
+    "mean_overlap_when_<100_nonzero": 0.19086614173228347,
+    "n_queries": 323
+  },
+  "E2": {
+    "oracle_topic_in_R": 0.49930154920506015,
+    "oracle_topic_evidence_off": 0.5488134477560791,
+    "oracle_topic_evidence_action_off": 0.5488134477560791,
+    "oracle_ceiling": 0.5488134477560791
+  }
+}
