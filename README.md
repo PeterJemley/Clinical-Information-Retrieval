@@ -156,8 +156,8 @@ paragraph and the audit supersede them.
 
 ### On authorship
 
-Ten of the commits in this repository name an AI coding agent as co-author. The
-division of work is visible in the log.
+Some of the commits in this repository name an AI coding agent as co-author, and
+`git log --grep=Co-Authored-By` lists them. The division of work is visible in the log.
 
 The framework and the criteria that would refute it are two commits from March 2026 —
 `b27b17e` on the 3rd and `b01a3be` on the 26th, 1,260 lines added and none removed,
