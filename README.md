@@ -156,8 +156,8 @@ paragraph and the audit supersede them.
 
 ### On authorship
 
-Ten of the commits in this repository name an AI coding agent as co-author. The
-division of work is visible in the log.
+Some of the commits in this repository name an AI coding agent as co-author, and
+`git log --grep=Co-Authored-By` lists them. The division of work is visible in the log.
 
 The framework and the criteria that would refute it are two commits from March 2026 —
 `b27b17e` on the 3rd and `b01a3be` on the 26th, 1,260 lines added and none removed,
@@ -165,12 +165,11 @@ neither carrying a co-author. Those two commits are the whole of the system unde
 the relevance function, the temporal and evidence modules, the retrieval baseline, the
 parameter file, and `FRAMEWORK.md`, which states the falsification criteria.
 
-The agent's commits are dated 23 and 26 August and 3 and 4 October. They add `evals/`,
-edit this README, and fix the package layout (`pyproject.toml` and the two test files).
-They modify no file that defines the framework — not `relevance.py`,
-`temporal.py`, `evidence.py`, `retrieval.py`, or the parameter file. The system under
-test and the apparatus that tested it were written nearly six months apart, and the
-second did not alter the first.
+The agent's commits begin on 23 August. They add `evals/`, edit this README, and fix the
+package layout (`pyproject.toml` and the two test files). They modify no file that defines
+the framework — not `relevance.py`, `temporal.py`, `evidence.py`, `retrieval.py`, or the
+parameter file. The system under test and the apparatus that tested it were written nearly
+six months apart, and the second did not alter the first.
 
 Also mine: the instruction to run the evaluation and publish the outcome whichever way it
 came out, and the decision against re-running on a corpus chosen after seeing the result.
