@@ -192,6 +192,13 @@ topical signal (0.499 against a ceiling of 0.549). If it still loses, the semant
 the problem. If it wins, the instrument fault is isolated and the composite becomes worth
 testing. That test will be registered before it is run.
 
+**Run 4 October 2026** ([`evals/topical-2026-10/`](evals/topical-2026-10/REPORT.md)). With MedCPT,
+a similarity-trained encoder, the topical component alone scored NDCG@10 = 0.330 against BM25's
+0.310. The preregistered verdict is inconclusive: difference +0.020, 95% CI [−0.002, +0.042]. It
+did not lose, so the August topical failure was the encoder. But the full composite with MedCPT
+still scored 0.088, because the keyword evidence weight swamps the topical term within each
+candidate pool. The composite is not yet worth testing as specified.
+
 ## License
 
 MIT

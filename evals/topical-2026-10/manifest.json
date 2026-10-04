@@ -1,0 +1,70 @@
+{
+  "test": "topical-2026-10",
+  "preregistration_commit": "a20b856",
+  "started": "2026-10-04T12:58:51+00:00",
+  "finished": "2026-10-04T12:59:22+00:00",
+  "script_sha256": "00c40940219de694e89cdf1c256f2468fb2c40636e6a1a00618d0e18d91b7f00",
+  "data": {
+    "BeIR/nfcorpus revision": "b5026a0e96e8a7ac4f95f482a596389289d46269",
+    "BeIR/nfcorpus-qrels revision": "a451b3b26d3ae1358f259c1a3a4dd61fcea35a65",
+    "sha256": {
+      "corpus.jsonl": "ee3db77bc2183e66b9c114e6eca4adf44de381705b1f8c94de8efdd232f0c4ff",
+      "queries.jsonl": "1b893f53f3f62e8f2949a6db619a9cb058e8d97901a5010e108e60c4ef5fd924",
+      "qrels/test.tsv": "f8fba6ef3d4dd9c3a242a8ba4ae38276fc3622fce7dcbae764766d564542fd2a"
+    }
+  },
+  "encoders": {
+    "medcpt_query": {
+      "name": "ncbi/MedCPT-Query-Encoder",
+      "revision": "d83a36cc6b8e3a5c5e9d9d6ba156808c1643dcbc",
+      "pooling": "cls",
+      "max_length": 64
+    },
+    "medcpt_article": {
+      "name": "ncbi/MedCPT-Article-Encoder",
+      "revision": "d05a736da4bb84ee4057b7f7999485be6ed85465",
+      "pooling": "cls",
+      "max_length": 512,
+      "input": "[title, text] sentence pair"
+    },
+    "pubmedbert_S2": {
+      "name": "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext",
+      "revision": "e1354b7a3a09615f6aba48dfad4b7a613eef7062",
+      "pooling": "mean",
+      "max_length": 512,
+      "input": "title + ' ' + text"
+    },
+    "device": "cpu",
+    "dtype": "float32"
+  },
+  "embeddings_sha256": {
+    "emb_medcpt_q_b78a1c5bcf68ebc5.npy": "426ef73f334e8c44c8119635a769e4616ca238c77343c5b75beb652eb9e6e8b0",
+    "emb_medcpt_a_41cbf524237e968a.npy": "628af3dc58ab5f26920e28649ad647ab4b35a5ac545ed2354c76a6618c5c9603",
+    "emb_pubmedbert_docs_905dd4977816c46d.npy": "a03859f8d2a4d1f6255b576c2d45b83b56ce553f239304105f2449de5c5ede79",
+    "emb_pubmedbert_queries_27474c2c2a48d6c7.npy": "8a625f7ef5d29d88d0bddfca13a3dcb6fda6feab09c902cf3c4b2ae0280a9d21"
+  },
+  "seeds": {
+    "bootstrap_and_signflip": 0,
+    "random_reorder_and_ties": "numpy default_rng([query_index, 7]), 200 draws",
+    "random_vectors": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v64-x86_64-with-glibc2.39",
+    "cpus": 4,
+    "packages": {
+      "numpy": "2.4.6",
+      "scipy": "1.17.1",
+      "torch": "2.14.1+cu130",
+      "transformers": "5.18.0",
+      "tokenizers": "0.23.2"
+    }
+  },
+  "command": "HF_HUB_DISABLE_XET=1 python evals/topical-2026-10/run_topical.py --data datasets/nfcorpus --cache .cache"
+}
