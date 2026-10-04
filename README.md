@@ -127,16 +127,36 @@ describe the system are corrected. `evals/report.md` and `evals/run_eval.py` rec
 was run on 23 August and are left as written, because the record is not edited after the
 run.
 
+**A third correction, 4 October 2026.** An audit of the August evaluation, registered
+before it was run, reproduced every number exactly. The verdict on criterion 1 stands.
+The explanation offered for it does not. `evals/report.md` and the companion note put the
+loss down to the topical signal: mean-pooled PubMedBERT was called actively harmful, and
+the topic-off ablation was read as direct evidence of it. That ablation's gain is an
+artefact of tie-breaking. With the topical weight at zero, a pool of 100 candidates takes a
+median of nine distinct scores, and Python's stable sort keeps the BM25 order inside each
+tie. Broken at random, the ties give the ablation the same score as the full system. The
+topical signal is uninformative, not harmful. Ranked by cosine alone, the pool comes out
+no better than in random order, and random vectors in place of the encoder make the
+system worse, not better (0.050 against 0.071). What lost to BM25 was the reranker. It
+takes a pool already in BM25 order and replaces that order with one indistinguishable
+from chance, set mostly by the keyword evidence weight. Conjecture 3 in the companion
+note survives in a weaker form: the topical measurement is broken, but the evidence cited
+for it was the artefact. Both documents are left as written, and on the mechanism this
+paragraph and the audit supersede them.
+
 ### Where the results are
 
 - Full results, ablations, and the components that could not be evaluated:
   [`evals/report.md`](evals/report.md)
 - A companion note separating what the result establishes from what it does not:
   [`evals/what-the-failure-establishes.md`](evals/what-the-failure-establishes.md)
+- An audit of that evaluation, registered before it was run, which reproduces it and
+  corrects its account of the mechanism:
+  [`evals/audit-2026-10-03/REPORT.md`](evals/audit-2026-10-03/REPORT.md)
 
 ### On authorship
 
-Three of the commits in this repository name an AI coding agent as co-author. The
+Ten of the commits in this repository name an AI coding agent as co-author. The
 division of work is visible in the log.
 
 The framework and the criteria that would refute it are two commits from March 2026 —
@@ -145,8 +165,9 @@ neither carrying a co-author. Those two commits are the whole of the system unde
 the relevance function, the temporal and evidence modules, the retrieval baseline, the
 parameter file, and `FRAMEWORK.md`, which states the falsification criteria.
 
-The agent's three commits are dated 23 and 26 August. They add `evals/` and edit this
-README. They modify no file that defines the framework — not `relevance.py`,
+The agent's commits are dated 23 and 26 August and 3 and 4 October. They add `evals/`,
+edit this README, and fix the package layout (`pyproject.toml` and the two test files).
+They modify no file that defines the framework — not `relevance.py`,
 `temporal.py`, `evidence.py`, `retrieval.py`, or the parameter file. The system under
 test and the apparatus that tested it were written nearly six months apart, and the
 second did not alter the first.
@@ -164,11 +185,13 @@ Not a re-run on a more favourable dataset. Choosing a corpus after seeing this r
 would be selection by outcome, and would void the value of having registered the
 criterion in advance.
 
-The next test isolates the most strongly supported explanation: the topical component
-alone, with a similarity-trained encoder in place of mean pooling, measured against BM25
-on the same data. If it still loses, the semantic path is the problem. If it wins, the
-instrument fault is isolated and the composite becomes worth testing. That test will be
-registered before it is run.
+The next test isolates the topical component: alone, with a similarity-trained encoder in
+place of mean pooling, measured against BM25 on the same data. The audit supports that
+choice for a narrower reason than the one first given. The topical signal carries no
+detectable information, and in an exploratory check the composite kept most of a perfect
+topical signal (0.499 against a ceiling of 0.549). If it still loses, the semantic path is
+the problem. If it wins, the instrument fault is isolated and the composite becomes worth
+testing. That test will be registered before it is run.
 
 ## License
 
