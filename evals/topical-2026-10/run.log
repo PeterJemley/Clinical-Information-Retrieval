@@ -1,0 +1,93 @@
+3633 docs, 323 test queries, 12334 judgments
+MedCPT query encoder...
+MedCPT article encoder...
+PubMedBERT mean-pooled (S2, the August encoder)...
+  query 1/323  0s
+  query 41/323  3s
+  query 81/323  7s
+  query 121/323  10s
+  query 161/323  13s
+  query 201/323  17s
+  query 241/323  20s
+  query 281/323  24s
+  query 321/323  27s
+{
+  "means": {
+    "bm25": 0.3103001666796228,
+    "medcpt_cos": 0.33030540292778937,
+    "pubmedbert_cos": 0.0326952955556161,
+    "random_vec_seed0": 0.00878651598350392,
+    "random_vec_seed1": 0.012215763314932567,
+    "random_vec_seed2": 0.0116658777073558,
+    "random_vec_seed3": 0.009550226236125961,
+    "random_vec_seed4": 0.01010575315322114,
+    "medcpt_dot": 0.3654868364826613,
+    "bm25_pool_by_bm25": 0.3103001666796228,
+    "pool_medcpt_cos": 0.3239260293992988,
+    "pool_random": 0.059847249553589915,
+    "composite_medcpt": 0.08828013628878885,
+    "composite_oracle": 0.4458625789004987,
+    "composite_oracle_random_ties": 0.4458625789004988,
+    "oracle_ceiling": 0.5329528643879352
+  },
+  "primary": {
+    "mean": 0.02000523624816663,
+    "sd": 0.20028124702808012,
+    "ci95": [
+      -0.0018904314921510397,
+      0.04223522959399328
+    ],
+    "p_signflip": 0.07019298070192981,
+    "n": 323,
+    "mde80": 0.031203050717287954,
+    "favour_first": 115,
+    "favour_second": 105,
+    "ties": 103,
+    "verdict": "inconclusive"
+  },
+  "five_percent_bar": {
+    "absolute_bar": 0.3603001666796228,
+    "relative_bar": 0.32581517501360396,
+    "meets_absolute": false,
+    "meets_relative": true,
+    "relative_change_pct": 6.447059459307829
+  },
+  "controls": {
+    "bm25_reproduces_august": {
+      "value": 0.3103001666796228,
+      "august": 0.3103001667,
+      "pass": true
+    },
+    "positive_bm25_pool_reorder": {
+      "value": 0.3103001666796228,
+      "pass": true
+    },
+    "negative_random_vectors": {
+      "seed_means": [
+        0.00878651598350392,
+        0.012215763314932567,
+        0.0116658777073558,
+        0.009550226236125961,
+        0.01010575315322114
+      ],
+      "any_within_0.05_of_medcpt": false
+    },
+    "median_distinct_scores_per_pool": {
+      "bm25_pool_by_bm25": 95.0,
+      "pool_medcpt_cos": 99.0,
+      "composite_medcpt": 99.0,
+      "composite_oracle": 12.0
+    },
+    "queries_with_tie_at_rank_10": {
+      "bm25": 82,
+      "medcpt_cos": 5,
+      "pubmedbert_cos": 3,
+      "medcpt_dot": 3
+    },
+    "oracle_composite": {
+      "stable": 0.4458625789004987,
+      "random_ties": 0.4458625789004988,
+      "ceiling": 0.5329528643879352
+    }
+  }
+}

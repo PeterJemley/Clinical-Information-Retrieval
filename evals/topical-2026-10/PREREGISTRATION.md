@@ -140,4 +140,13 @@ is tried in this test, whatever the outcome.
 
 ## Deviation log
 
-(none yet)
+- 2026-10-04: the first run wrote `results.json`, `per_query.csv` and the console summary, then
+  stopped before writing `manifest.json`, because `scipy` (imported only to record its version)
+  was not installed. Installed `scipy` and reran the unchanged script with the embedding cache
+  from the first run. `results.json` and `per_query.csv` were byte-identical to the first run's.
+  Seen results before the change: yes. Effect: none on results.
+- 2026-10-04: added `exploratory.py` after seeing S3, to find why the composite collapses with
+  MedCPT. Seen results before the change: yes. Effect: exploratory.
+- 2026-10-04: the S2 PubMedBERT embeddings are not byte-identical to the audit's, because this
+  harness batches inputs by length. S2 was never registered as a reproduction. Effect: none on
+  the decision rule.
