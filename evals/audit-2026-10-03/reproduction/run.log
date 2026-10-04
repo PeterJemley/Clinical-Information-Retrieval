@@ -1,0 +1,122 @@
+Loading NFCorpus...
+  3633 docs, 323 test queries
+Embedding documents (PubMedBERT, mean-pooled)...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 5397.20it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext
+Key                                        | Status     |  | 
+-------------------------------------------+------------+--+-
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+cls.predictions.decoder.weight             | UNEXPECTED |  | 
+cls.predictions.decoder.bias               | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+  [docs] embedded 32/3633
+  [docs] embedded 672/3633
+  [docs] embedded 1312/3633
+  [docs] embedded 1952/3633
+  [docs] embedded 2592/3633
+  [docs] embedded 3232/3633
+Embedding queries...
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 6586.23it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext
+Key                                        | Status     |  | 
+-------------------------------------------+------------+--+-
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+cls.predictions.decoder.weight             | UNEXPECTED |  | 
+cls.predictions.decoder.bias               | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+  [queries] embedded 32/323
+Scorer fidelity check OK (score_doc == clinical_relevance: 0.551196)
+  query 1/323
+  query 51/323
+  query 101/323
+  query 151/323
+  query 201/323
+  query 251/323
+  query 301/323
+=== RESULTS ===
+{
+  "dataset": "BEIR/NFCorpus test",
+  "n_docs": 3633,
+  "n_queries": 323,
+  "metric": "NDCG@10 (repo clinical_ir.evaluate.ndcg_at_k, graded gains)",
+  "encoder": "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext",
+  "bm25_ndcg@10": 0.3103001666796228,
+  "full_ndcg@10": 0.07052113745505006,
+  "delta_abs": -0.23977902922457273,
+  "delta_rel_pct": -77.27325182913569,
+  "criterion_5pct_abs_met": false,
+  "configs": {
+    "bm25": {
+      "ndcg@10": 0.3103001666796228,
+      "ci95": [
+        0.27724010032519825,
+        0.344530316172589
+      ],
+      "n": 323
+    },
+    "full_clinical": {
+      "ndcg@10": 0.07052113745505006,
+      "ci95": [
+        0.05566270406630999,
+        0.08491470088539552
+      ],
+      "n": 323
+    },
+    "abl_temporal_off": {
+      "ndcg@10": 0.07052113745505006,
+      "ci95": [
+        0.05566270406630999,
+        0.08491470088539552
+      ],
+      "n": 323
+    },
+    "abl_evidence_off": {
+      "ndcg@10": 0.06698304092952381,
+      "ci95": [
+        0.05299632711016147,
+        0.08199611630450111
+      ],
+      "n": 323
+    },
+    "abl_topic_off": {
+      "ndcg@10": 0.08243470654388363,
+      "ci95": [
+        0.06709284058952737,
+        0.09788724809054256
+      ],
+      "n": 323
+    },
+    "abl_apply_off": {
+      "ndcg@10": 0.07031601602020676,
+      "ci95": [
+        0.05553326702133953,
+        0.08470957945055221
+      ],
+      "n": 323
+    },
+    "abl_action_off": {
+      "ndcg@10": 0.0730688601582518,
+      "ci95": [
+        0.058103487811881446,
+        0.08791739656354021
+      ],
+      "n": 323
+    }
+  }
+}
+wrote /tmp/claude-0/-home-user-Clinical-Information-Retrieval/dff9b8e0-cac2-59e8-8b31-85a0078a592b/scratchpad/repro/evals/results.json

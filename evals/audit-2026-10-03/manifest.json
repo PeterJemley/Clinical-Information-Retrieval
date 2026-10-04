@@ -1,0 +1,109 @@
+{
+  "audit_id": "audit-2026-10-03",
+  "preregistration_commit": "a3117b4",
+  "code_under_test_commit": "3b0dd21",
+  "code_under_test_import": "clinical_ir -> symlink to repo root (pip install -e . installs no clinical_ir package)",
+  "scripts_sha256": {
+    "audit.py": "8364c6796f15bc5ec49d9515bb02ab0140a9f4b97a8c85cf71f3845501096379",
+    "exploratory.py": "95c775f9d5591de909977ff0c617949171cc27d13db023e8843b6565fb37feac",
+    "classifier_check.py": "d1cb59104f22b912c8320600f5e707ae737254aaa0cba10ac30d12580433e881"
+  },
+  "august_harness_sha256": {
+    "evals/run_eval.py": "91e90f59df8fe71d67aaadcecc21c37f2bb74416ff30713f08e37252a9e95a10",
+    "reproduction copy": "91e90f59df8fe71d67aaadcecc21c37f2bb74416ff30713f08e37252a9e95a10"
+  },
+  "data": {
+    "source": "HuggingFace mirror (UKP host blocked from this environment)",
+    "BeIR/nfcorpus revision": "b5026a0e96e8a7ac4f95f482a596389289d46269",
+    "BeIR/nfcorpus-qrels revision": "a451b3b26d3ae1358f259c1a3a4dd61fcea35a65",
+    "sha256": {
+      "corpus.parquet": "f2a1c0b570a5efdf23cfa36f5e573d062cc113c6e7251e22c69b323a33ea895e",
+      "queries.parquet": "edd2b878b8130fb3b5e3c4b9428ddc1e67fbd6eedf8ae099fca3b87838ba6b29",
+      "qrels/test.tsv": "f8fba6ef3d4dd9c3a242a8ba4ae38276fc3622fce7dcbae764766d564542fd2a",
+      "corpus.jsonl (converted)": "ee3db77bc2183e66b9c114e6eca4adf44de381705b1f8c94de8efdd232f0c4ff",
+      "queries.jsonl (converted)": "1b893f53f3f62e8f2949a6db619a9cb058e8d97901a5010e108e60c4ef5fd924"
+    }
+  },
+  "encoder": {
+    "name_in_code": "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext",
+    "resolved_to": "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext",
+    "revision": "e1354b7a3a09615f6aba48dfad4b7a613eef7062",
+    "device": "cpu",
+    "dtype": "float32",
+    "pooling": "mean"
+  },
+  "embeddings_sha256": {
+    "emb_docs_8668aa82b369.npy": "423d11c9c3baf619b4ecdea02665dc9d7b9444a4964553ccca065a14506d1a9a",
+    "emb_queries_4bc7afed6437.npy": "46718648659cbd0742dfdf619d08f564b19e05232f6efecbc151e636ed3f866d"
+  },
+  "seeds": {
+    "bootstrap_and_signflip": 0,
+    "random_rerank_and_ties": "numpy default_rng([query_index, 7]), 200 draws per query",
+    "random_embeddings": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "august_bootstrap": 0
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v64-x86_64-with-glibc2.39",
+    "cpus": 4,
+    "packages": {
+      "numpy": "2.4.6",
+      "scipy": "1.17.1",
+      "torch": "2.14.1",
+      "transformers": "5.18.0",
+      "tokenizers": "0.23.2",
+      "huggingface_hub": "1.33.0",
+      "pandas": "3.0.6",
+      "pyarrow": "25.0.1"
+    },
+    "env": {
+      "HF_HUB_DISABLE_XET": "1",
+      "PYTHONPATH": "<dir with clinical_ir symlink>"
+    }
+  },
+  "runs": [
+    {
+      "step": "R reproduction",
+      "command": "python evals/run_eval.py (byte-identical copy)",
+      "start": "2026-10-03T21:23:57Z",
+      "end": "2026-10-03T21:44:08Z",
+      "outputs": [
+        "reproduction/results.json",
+        "reproduction/run.log"
+      ]
+    },
+    {
+      "step": "D1-D8 diagnostics",
+      "command": "python evals/audit-2026-10-03/audit.py --data ... --cache ... --repro-results reproduction/results.json",
+      "start": "2026-10-03T21:44:28Z",
+      "end": "2026-10-03T21:45:55Z",
+      "outputs": [
+        "results.json",
+        "per_query.csv",
+        "audit_run.log"
+      ]
+    },
+    {
+      "step": "E1-E2 exploratory",
+      "command": "python evals/audit-2026-10-03/exploratory.py --data ... --cache ...",
+      "outputs": [
+        "exploratory_results.json",
+        "exploratory_run.log"
+      ]
+    },
+    {
+      "step": "classifier inspection (exploratory)",
+      "command": "python evals/audit-2026-10-03/classifier_check.py --data ...",
+      "outputs": [
+        "classifier_check.json"
+      ]
+    }
+  ],
+  "note": "A first reproduction attempt at 2026-10-03T21:23Z failed before computing anything (model download blocked by the Xet backend); rerun with HF_HUB_DISABLE_XET=1."
+}

@@ -1,6 +1,6 @@
 import pytest
 from types import SimpleNamespace
-import evaluate
+from clinical_ir import evaluate
 import math
 
 # Simple local stubs for Document and Query if needed (we'll use SimpleNamespace)
