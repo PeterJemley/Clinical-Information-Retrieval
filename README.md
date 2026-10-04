@@ -156,7 +156,7 @@ paragraph and the audit supersede them.
 
 ### On authorship
 
-Eight of the commits in this repository name an AI coding agent as co-author. The
+Ten of the commits in this repository name an AI coding agent as co-author. The
 division of work is visible in the log.
 
 The framework and the criteria that would refute it are two commits from March 2026 —
