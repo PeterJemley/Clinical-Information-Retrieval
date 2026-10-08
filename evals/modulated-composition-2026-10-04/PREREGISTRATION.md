@@ -465,3 +465,14 @@ Nothing Stage 0 shows changes M, the gate table, the modules or the decision rul
   et al., 2020), known here from web-search summaries only:
   https://pages.nist.gov/trec-browser/trec25/clinical/overview,
   https://pages.nist.gov/trec-browser/trec29/pm/proceedings
+
+### Log
+
+- 2026-10-08: Stage 0 ran with script `5bbf58a`, from 00:59 to 01:23 UTC. The results are
+  in `stage0/REPORT.md` and are exploratory.
+  - Every fidelity check passed, including the A6 gate.
+  - P̄ − M passed, so no harness fix was needed.
+  - The prediction |N̄ − B0| < 0.03 failed (−0.0335). The noise control still fell below
+    BM25 and well under the bar.
+  - Nothing in M, the gate table, the modules or the decision rule changed.
+  - Stage 0 results were seen before this entry was written.

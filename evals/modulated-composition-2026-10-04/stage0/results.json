@@ -1,0 +1,320 @@
+{
+  "stage": "0 (exploratory pilot)",
+  "fidelity": {
+    "a5_mapping_unit_tests": {
+      "passed": 10,
+      "of": 10,
+      "cases": [
+        {
+          "input": [
+            "Randomized Controlled Trial",
+            "Clinical Trial",
+            "Comparative Study",
+            "Journal Article"
+          ],
+          "expected": "RCT",
+          "got": "RCT",
+          "ok": true
+        },
+        {
+          "input": [
+            "Meta-Analysis",
+            "Review"
+          ],
+          "expected": "SYSTEMATIC_REVIEW",
+          "got": "SYSTEMATIC_REVIEW",
+          "ok": true
+        },
+        {
+          "input": [
+            "Systematic Review",
+            "Randomized Controlled Trial"
+          ],
+          "expected": "SYSTEMATIC_REVIEW",
+          "got": "SYSTEMATIC_REVIEW",
+          "ok": true
+        },
+        {
+          "input": [
+            "Clinical Trial"
+          ],
+          "expected": "CONTROLLED_OBSERVATIONAL",
+          "got": "CONTROLLED_OBSERVATIONAL",
+          "ok": true
+        },
+        {
+          "input": [
+            "Observational Study",
+            "Journal Article"
+          ],
+          "expected": "CONTROLLED_OBSERVATIONAL",
+          "got": "CONTROLLED_OBSERVATIONAL",
+          "ok": true
+        },
+        {
+          "input": [
+            "Case Reports"
+          ],
+          "expected": "UNCONTROLLED_OBSERVATIONAL",
+          "got": "UNCONTROLLED_OBSERVATIONAL",
+          "ok": true
+        },
+        {
+          "input": [
+            "Editorial",
+            "Comment"
+          ],
+          "expected": "EXPERT_OPINION",
+          "got": "EXPERT_OPINION",
+          "ok": true
+        },
+        {
+          "input": [
+            "Review"
+          ],
+          "expected": null,
+          "got": null,
+          "ok": true
+        },
+        {
+          "input": [
+            "Journal Article"
+          ],
+          "expected": null,
+          "got": null,
+          "ok": true
+        },
+        {
+          "input": [],
+          "expected": null,
+          "got": null,
+          "ok": true
+        }
+      ]
+    },
+    "a6_sparse_bm25_gate": {
+      "queries": 323,
+      "top100_mismatches": 0,
+      "ndcg10": 0.3103001666796228,
+      "august": 0.3103001666796228,
+      "abs_diff": 0.0,
+      "passed": true
+    },
+    "dev_checks": {
+      "m_bm25_only_equals_B0": "324/324",
+      "V_equals_U": "324/324",
+      "F_formula_mismatch": 0,
+      "B0_equals_repo_bm25_top100": "324/324"
+    }
+  },
+  "L": {
+    "training_queries_with_pairs": 2022,
+    "cv_mean_ndcg10": {
+      "0.01": 0.4220015511949268,
+      "0.1": 0.4198954322383306,
+      "1": 0.4172485082254901,
+      "10": 0.4163216486862413
+    },
+    "lambda": 0.01
+  },
+  "R_permutations": {
+    "0": [
+      "prognosis",
+      "treatment",
+      "diagnosis_test",
+      "other"
+    ],
+    "1": [
+      "treatment",
+      "diagnosis_test",
+      "prognosis",
+      "other"
+    ],
+    "2": [
+      "other",
+      "prognosis",
+      "treatment",
+      "diagnosis_test"
+    ],
+    "3": [
+      "other",
+      "prognosis",
+      "diagnosis_test",
+      "treatment"
+    ],
+    "4": [
+      "other",
+      "treatment",
+      "diagnosis_test",
+      "prognosis"
+    ]
+  },
+  "question_types_dev": {
+    "other": 304,
+    "treatment": 16,
+    "prognosis": 3,
+    "diagnosis_test": 1
+  },
+  "means": {
+    "B0": 0.2683039036165654,
+    "F": 0.050830440147623855,
+    "M": 0.2937416871215866,
+    "U": 0.2630743744941806,
+    "V": 0.2630743744941806,
+    "L": 0.2955728610691691,
+    "N0": 0.22962835625940883,
+    "N1": 0.23160250110562608,
+    "N2": 0.23500205573576655,
+    "N3": 0.23944402606860332,
+    "N4": 0.23841182198836824,
+    "R0": 0.29573363352832305,
+    "R1": 0.2937416871215866,
+    "R2": 0.26534744301713664,
+    "R3": 0.26534744301713664,
+    "R4": 0.29573363352832305,
+    "P0": 0.3486288570250016,
+    "P1": 0.34496172453687496,
+    "P2": 0.34370291834030087,
+    "P3": 0.34264181036686414,
+    "P4": 0.3424871238366989,
+    "N_bar": 0.2348177522315546,
+    "R_bar": 0.2831807680425012,
+    "P_bar": 0.3444844868211481
+  },
+  "primary_M_minus_B0": {
+    "mean": 0.02543778350502123,
+    "ci95": [
+      0.016357986553154492,
+      0.03507403710891923
+    ],
+    "p": 9.999000099990002e-05,
+    "n": 324,
+    "sd": 0.08442033424597803,
+    "favour": [
+      115,
+      47,
+      162
+    ]
+  },
+  "secondary_holm": {
+    "M-F": {
+      "mean": 0.24291124697396274,
+      "ci95": [
+        0.21351153159950492,
+        0.27311193017373664
+      ],
+      "p": 9.999000099990002e-05,
+      "n": 324,
+      "sd": 0.2688712844548644,
+      "favour": [
+        205,
+        10,
+        109
+      ],
+      "p_holm": 0.0004999500049995
+    },
+    "M-U": {
+      "mean": 0.030667312627406046,
+      "ci95": [
+        0.0223610877610193,
+        0.03927401067258508
+      ],
+      "p": 9.999000099990002e-05,
+      "n": 324,
+      "sd": 0.07765494416046226,
+      "favour": [
+        127,
+        37,
+        160
+      ],
+      "p_holm": 0.0004999500049995
+    },
+    "M-V": {
+      "mean": 0.030667312627406046,
+      "ci95": [
+        0.0223610877610193,
+        0.03927401067258508
+      ],
+      "p": 9.999000099990002e-05,
+      "n": 324,
+      "sd": 0.07765494416046226,
+      "favour": [
+        127,
+        37,
+        160
+      ],
+      "p_holm": 0.0004999500049995
+    },
+    "M-L": {
+      "mean": -0.0018311739475824662,
+      "ci95": [
+        -0.006363294458005343,
+        0.0031023732511261714
+      ],
+      "p": 0.4707529247075293,
+      "n": 324,
+      "sd": 0.04353378376988055,
+      "favour": [
+        44,
+        66,
+        214
+      ],
+      "p_holm": 0.4707529247075293
+    },
+    "M-Rbar": {
+      "mean": 0.010560919079085417,
+      "ci95": [
+        0.0065967406938661904,
+        0.014495565720865819
+      ],
+      "p": 9.999000099990002e-05,
+      "n": 324,
+      "sd": 0.03628469070567068,
+      "favour": [
+        133,
+        53,
+        138
+      ],
+      "p_holm": 0.0004999500049995
+    }
+  },
+  "controls": {
+    "Nbar-B0": {
+      "mean": -0.03348615138501079,
+      "ci95": [
+        -0.04165411647955807,
+        -0.02551420957520446
+      ],
+      "p": 9.999000099990002e-05,
+      "n": 324,
+      "sd": 0.07427174356071867,
+      "favour": [
+        60,
+        142,
+        122
+      ]
+    },
+    "Pbar-M": {
+      "mean": 0.050742799699561456,
+      "ci95": [
+        0.04327682793869657,
+        0.0585181279741523
+      ],
+      "p": 9.999000099990002e-05,
+      "n": 324,
+      "sd": 0.07066435721690073,
+      "favour": [
+        187,
+        24,
+        113
+      ]
+    }
+  },
+  "decision_rule_applied_exploratory": "Refuted",
+  "stage0_predictions": {
+    "|M-B0| < 0.03": true,
+    "|Nbar-B0| < 0.03": false,
+    "Pbar-M > 0 with CI lower > 0": true
+  },
+  "runtime_seconds": 1427.3
+}
