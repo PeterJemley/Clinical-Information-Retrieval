@@ -1,0 +1,67 @@
+{
+  "stage": "0",
+  "preregistration": "../PREREGISTRATION.md",
+  "amendment_commit": "4dbc7ea",
+  "started": "2026-10-08T00:59:38+00:00",
+  "finished": "2026-10-08T01:23:26+00:00",
+  "script_sha256": "9b606554a639fdbda8ebe49496066192647acfd7dc058eff8803cabfbd561f46",
+  "data": {
+    "source": "BeIR/nfcorpus rev b5026a0e96e8a7ac4f95f482a596389289d46269; BeIR/nfcorpus-qrels rev a451b3b26d3ae1358f259c1a3a4dd61fcea35a65",
+    "sha256": {
+      "corpus.jsonl": "ee3db77bc2183e66b9c114e6eca4adf44de381705b1f8c94de8efdd232f0c4ff",
+      "queries.jsonl": "1b893f53f3f62e8f2949a6db619a9cb058e8d97901a5010e108e60c4ef5fd924",
+      "qrels/train.tsv": "6336b80f9bffc4f063f3aa450047ad35c0b7c534efe4a6ba35e16dbace047f6a",
+      "qrels/dev.tsv": "b1d38b5e8f78c4a5820bce2b7ec2db54911d7690dc601e76811846b211180bd8",
+      "qrels/test.tsv": "f8fba6ef3d4dd9c3a242a8ba4ae38276fc3622fce7dcbae764766d564542fd2a"
+    }
+  },
+  "encoders": {
+    "medcpt_query": {
+      "name": "ncbi/MedCPT-Query-Encoder",
+      "revision": "d83a36cc6b8e3a5c5e9d9d6ba156808c1643dcbc",
+      "pooling": "cls",
+      "max_length": 64
+    },
+    "medcpt_article": {
+      "name": "ncbi/MedCPT-Article-Encoder",
+      "revision": "d05a736da4bb84ee4057b7f7999485be6ed85465",
+      "pooling": "cls",
+      "max_length": 512
+    },
+    "pubmedbert": {
+      "name": "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext",
+      "revision": "e1354b7a3a09615f6aba48dfad4b7a613eef7062",
+      "pooling": "mean",
+      "max_length": 512
+    }
+  },
+  "pubmedbert_doc_embeddings": "audit cache, sha256 matches the audit manifest",
+  "embeddings_sha256": {
+    "emb_medcpt_article_6b0ec3fa9c8f1dbc.npy": "23bf286cabab8eaf877e8192654b12f5c7730d7caf9cbaf59bd86e622e2185f2",
+    "emb_medcpt_query_7b1e4885fa6f2463.npy": "466d72b088b254c9406a147c1d281e8c52816863b2b014c689a09036f90cb5d0",
+    "emb_docs_8668aa82b369.npy": "423d11c9c3baf619b4ecdea02665dc9d7b9444a4964553ccca065a14506d1a9a",
+    "emb_pubmedbert_b1b7bf8c78116b6c.npy": "408578367e44cb30343b8aec72e0577a553378a30984e20d96f63cb833b085ee"
+  },
+  "seeds": {
+    "N/R/P": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "L folds and pairs": 0,
+    "bootstrap and sign-flip": 0
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v80-x86_64-with-glibc2.39",
+    "cpus": 4,
+    "packages": {
+      "numpy": "2.4.6",
+      "scipy": "1.17.1",
+      "torch": "2.14.1+cu130",
+      "transformers": "5.18.0"
+    }
+  }
+}
