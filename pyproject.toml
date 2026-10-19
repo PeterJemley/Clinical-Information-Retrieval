@@ -11,7 +11,9 @@ requires-python = ">=3.9"
 dependencies = ["numpy>=1.20.0"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "scipy>=1.10"]
+# evals/modulated-composition-2026-10-04/stage1/stage1.py (the real run; its checks need only `dev`)
+stage1 = ["scipy>=1.10", "torch>=2.0", "transformers>=4.30"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

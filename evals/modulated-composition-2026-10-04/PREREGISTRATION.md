@@ -466,6 +466,83 @@ Nothing Stage 0 shows changes M, the gate table, the modules or the decision rul
   https://pages.nist.gov/trec-browser/trec25/clinical/overview,
   https://pages.nist.gov/trec-browser/trec29/pm/proceedings
 
+### Amendment 2 (committed 2026-10-18): before Stage 1 data
+
+**Status:** committed before any Stage 1 data were accessed. It was written after the Stage 0
+results were seen, and B1 responds to them. Nothing here changes M, the gate table, the
+modules, the claim or the 0.05 bar.
+
+**B1. The learned ranker's grid.** Stage 0's cross-validation chose 0.01, the smallest
+penalty in the registered grid {0.01, 0.1, 1, 10}. L's optimum may therefore lie below the
+grid. An under-tuned L would favour M in the M − L comparison.
+- Stage 1's grid adds one value: {0.001, 0.01, 0.1, 1, 10}.
+- If 0.001 is chosen and is again the smallest tried, it is kept, the grid is not extended
+  further, and the boundary is reported as a limitation.
+- This follows the rule the author's continuous-depth-transformer project used when its
+  baseline's best learning rate fell at the edge of its grid. The change can only
+  strengthen a comparator.
+
+**B2. A manipulation check, and an Untestable verdict.** On these topics, M differs from U
+only in the evidence module, and only on diagnosis and test topics. If few pooled documents
+have publication types, gating barely changes any ranking. A null M − U would then mean the
+manipulation never took effect, not that gating does not help.
+- **Measured from rankings alone, before any judgment is read (B3):** the share of diagnosis
+  and test topics on which M's top 10 differs from U's top 10, compared as ordered lists.
+- **Also reported:** the share of those topics whose evidence module varies within the
+  pool, and the share of pooled documents that have an evidence label.
+- **Precondition:** the share is at least 0.5. Below that, gating changed the ranking on
+  fewer than half the topics it was meant to affect.
+- **Decision rule, applied in this order:** Test failed, Refuted, **Untestable** (the
+  precondition failed), Supported, Gain without attribution, Inconclusive. Refuted comes
+  before Untestable, because M − B0 falling short of the bar refutes the claim whether or
+  not gating took effect.
+
+**B3. Judgments are read last.**
+- The script first computes every ranking that needs no judgment: B0, F, M, U, V, N and R.
+  It saves them as run files, then computes and saves the B2 manipulation check.
+- Only then does it read the judgments.
+- L, which is trained on judgments, and P, which is built from them, come after that.
+
+**B4. The analysis code is tested before any Stage 1 data.** `stage1/check_stage1.py` must
+pass, covering:
+- every branch of the decision rule, on constructed inputs;
+- two synthetic result sets whose verdicts are known in advance;
+- the parsers, on hand-made files;
+- the sparse BM25 against the repository's BM25, on a synthetic corpus;
+- a small end-to-end run on fixture data with a stand-in encoder.
+
+The real run refuses the stand-in encoder.
+
+**B5. Gaps the earlier text left open.**
+- **Missing dates:** a document with no usable publication date gets the pool mean on the
+  temporal module (z = 0), just as unlabelled documents do on evidence. A collection with
+  date coverage under 95% (criterion 1) has temporal gated off for all its topics.
+- **Which date:** publication dates come from the NXML `pub-date` element, preferring
+  `epub`, then `ppub`, then any other. A missing month or day becomes 1.
+- **F's dates and evidence:** F uses each document's own publication date for τ, as version
+  0.1 specifies, with the reference date as the query time. A document with no date gets
+  τ = 1. F takes its evidence level from version 0.1's keyword classifier, as in August.
+- **P's noise:** the synthetic module is grade + N(0, s²), where s is half the range of the
+  judgment scale (1 for grades 0–2, as on NFCorpus). Its strength therefore stays the same
+  if the scale differs.
+- **L's cross-fitting:** L is cross-fitted in 5 outer folds over the 90 topics (seed 0). In
+  each outer fold the penalty is chosen by 5-fold cross-validation inside it, as registered.
+
+**B6. Data are checked on every load.**
+- Each preparation step writes a metadata file holding the SHA-256 of what it produced.
+  The run refuses a corpus or publication-type file whose checksum does not match.
+- The two collections' reference dates must be given in the run configuration and are not
+  defaulted, because the 2014 date is still an A11 item.
+
+**B7. Thresholds re-checked for the new setting.** None of the registered thresholds was
+calibrated on NFCorpus:
+- the 0.05 bar is the claim's own;
+- the B2 threshold is new;
+- P's noise scales with the judgment range (B5).
+
+Stage 0's paired SD for M − B0 was 0.084, below the 0.10 used for sizing, so the registered
+sizing errs on the conservative side.
+
 ### Log
 
 - 2026-10-08: Stage 0 ran with script `5bbf58a`, from 00:59 to 01:23 UTC. The results are
@@ -476,3 +553,42 @@ Nothing Stage 0 shows changes M, the gate table, the modules or the decision rul
     BM25 and well under the bar.
   - Nothing in M, the gate table, the modules or the decision rule changed.
   - Stage 0 results were seen before this entry was written.
+- 2026-10-18: Amendment 2 committed, before any Stage 1 data were accessed. It was written
+  after the Stage 0 results were seen, and B1 responds to them. The Stage 1 script and its
+  checks (B4) are committed separately, also before any Stage 1 data are accessed.
+- 2026-10-19: the Stage 1 script and its checks committed in `ba1eb39` and `767ed19`, before
+  any Stage 1 data were accessed.
+  - `stage1/check_stage1.py` passes all 119 checks.
+  - The checks were mutation-tested: 33 bugs were planted in `stage1.py`, one at a time, and
+    the checks failed on 32. The one they passed gives identical scores, so no test can
+    catch it. An earlier round found five gaps, closed in `767ed19`. Among them, the checks
+    now recompute M, U, V and R from saved module scores and the gate table above.
+  - The A6 gate, re-run with the final sparse BM25 on the NFCorpus test queries, gives the
+    same top 100 for 323 of 323 queries and NDCG@10 = 0.3103001666796228.
+  - Choices the plan left open, fixed in the script. None changes M, the gate table, the
+    modules or the decision rule:
+    - a document's identifier is its NXML file name, the PMCID the track's judgments use,
+      with the article's own PMC identifier as the fallback. Disagreements are counted in
+      the corpus metadata;
+    - the A6 target is fixed in the code and cannot be changed in the run configuration;
+    - a judgment file line that is not four-column TREC format stops the run;
+    - the module scores behind every judgment-free ranking are saved before any judgment
+      is read;
+    - the fidelity checks in the Analysis section run inside Stage 1, and a failure stops
+      the run before any judgment is read.
+- 2026-10-19, later the same day, still before any Stage 1 data were accessed: a real
+  Stage 1 run now checks the code it runs on, and will not start unless:
+  - the six framework files it imports match commit `7d752b1` byte for byte (A5);
+  - no tracked file has uncommitted changes, so the commit in the manifest is the code
+    that ran;
+  - `check_stage1.py` passes on the machine doing the run (B4).
+
+  The outcome is recorded in the manifest and in the generated report. A test-mode run
+  records the framework checksums without enforcing them.
+  - Continuous integration (GitHub Actions) now runs the framework tests and
+    `check_stage1.py` on every pull request and every push to `main`. Python, numpy, scipy
+    and pytest are pinned to the versions these checks were run with.
+  - scipy, which Stage 0 and Stage 1 need, is now declared as a dependency.
+  - `check_stage1.py` passes all 131 checks, also in a fresh environment with the pinned
+    versions. Mutation testing with nine new mutants aimed at these refusals: the checks
+    failed on 41 of 42. The one they passed is the same equivalent mutant as before.
