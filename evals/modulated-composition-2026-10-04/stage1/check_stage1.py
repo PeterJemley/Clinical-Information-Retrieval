@@ -15,13 +15,16 @@ Checks for stage1.py. They must pass before any Stage 1 data are accessed (Amend
    a topic's held-out scores must not change when its own judgments are reversed.
 7. A small end-to-end run on fixture data with the stand-in encoder: outputs, the B3 order,
    determinism, and the refusals (stand-in encoder outside test mode, a changed data file, a
-   missing reference date, the A6 gate's target in a real run, judgments that cannot be read).
+   missing reference date, judgments that cannot be read).
    B0, M, U, V and R are recomputed from the saved module scores with the gate table parsed
    from PREREGISTRATION.md, not with stage1.py's copy of it.
+8. The preconditions of a real run: the registered framework files (A5), no uncommitted change
+   to a tracked file, and these checks passing. A real run is never launched past them here,
+   since on a clean checkout it would run these checks again.
 
 Everything is generated here; nothing is downloaded.
 """
-import csv, json, os, shutil, subprocess, sys, tarfile, tempfile
+import csv, hashlib, json, os, shutil, subprocess, sys, tarfile, tempfile
 from datetime import datetime
 import numpy as np
 
@@ -618,6 +621,9 @@ def check_end_to_end():
               idx("Judgment-free rankings saved") < idx("Manipulation check saved") < idx("Judgments read"), ev)
         mc = json.load(open(os.path.join(out1, "manipulation_check.json")))
         check("run: manipulation check saved with the registered threshold", mc["threshold"] == 0.5 and mc["diagnosis_test_topics"] == 12, mc)
+        code = R["preconditions"]["code"]
+        check("run: test mode records the framework checksums but does not enforce them",
+              code["enforced"] is False and set(code["framework_sha256"]) == set(S.FRAMEWORK_SHA256))
         check("run: L cross-fitted in 5 outer folds on the B1 grid",
               len(R["L"]["folds"]) == 5 and all(set(f["cv"]) == {str(l) for l in S.LAMBDAS} for f in R["L"]["folds"]), R["L"])
         check("run: P's noise is half the judgment range (B5)", R["p_noise_sd"] == 1.0, R["p_noise_sd"])
@@ -641,9 +647,19 @@ def check_end_to_end():
 
         r = cli("run", "--config", config, "--out", os.path.join(root, "o3"), "--cache", cache, "--fake-encoder")
         check("refusal: the stand-in encoder outside test mode", r.returncode != 0 and "stand-in encoder" in r.stderr, r.stderr[-400:])
-        r = cli("run", "--config", config, "--out", os.path.join(root, "o4"), "--cache", cache)
-        check("refusal: a real run holds the A6 gate to the registered NDCG@10 target",
-              r.returncode != 0 and "A6 sparse BM25 fidelity gate failed" in r.stderr, r.stderr[-400:])
+        check("A6: a real run's target is the registered NDCG@10; test mode has none",
+              S.a6_target(False) == S.AUGUST_BM25_NDCG == 0.3103001666796228 and S.a6_target(True) is None)
+        g = S.a6_gate(os.path.join(root, "nfcorpus"), S.a6_target(False))
+        check("A6: the gate fails when NDCG@10 misses the target, even with identical top 100s",
+              g["top100_mismatches"] == 0 and not g["passed"], g)
+        elsewhere = os.path.join(root, "not_a_checkout")
+        os.makedirs(elsewhere)
+        shutil.copy(os.path.join(HERE, "stage1.py"), elsewhere)
+        o4 = os.path.join(root, "o4")
+        r = subprocess.run([sys.executable, os.path.join(elsewhere, "stage1.py"), "run", "--config", config, "--out", o4,
+                            "--cache", cache], capture_output=True, text=True)
+        check("refusal: a real run outside a git checkout stops before reading anything",
+              r.returncode != 0 and "not a git checkout" in r.stderr and not os.path.exists(o4), r.stderr[-400:])
 
         tampered = os.path.join(root, "c2014_tampered.jsonl")  # one byte added, metadata copied unchanged
         with open(tampered, "w") as f:
@@ -674,8 +690,61 @@ def check_end_to_end():
               and open(os.path.join(o7, "runs", "M.trec")).read() == open(os.path.join(out1, "runs", "M.trec")).read())
 
 
+# ---------- 8. preconditions of a real run ----------
+def git(repo, *args):
+    return subprocess.run(["git", "-C", repo, "-c", "user.name=check", "-c", "user.email=check@example.org", *args],
+                          capture_output=True, text=True)
+
+
+def check_preconditions():
+    fw = S.framework_files()
+    check("framework: the six imported files are the ones checksummed", set(fw) == set(S.FRAMEWORK_SHA256), sorted(fw))
+    bad = []
+    for commit in (S.FRAMEWORK_COMMIT, "3b0dd21"):
+        for name, want in S.FRAMEWORK_SHA256.items():
+            r = subprocess.run(["git", "-C", HERE, "show", f"{commit}:{name}"], capture_output=True)
+            if r.returncode != 0:
+                bad.append(f"{commit}:{name} unreadable (the checks need the full git history)")
+            elif hashlib.sha256(r.stdout).hexdigest() != want:
+                bad.append(f"{commit}:{name}")
+    check(f"framework: registered checksums equal the files at {S.FRAMEWORK_COMMIT} and 3b0dd21 (A5)", not bad, bad)
+
+    with tempfile.TemporaryDirectory() as root:
+        ok_script, bad_script = os.path.join(root, "ok.py"), os.path.join(root, "bad.py")
+        open(ok_script, "w").write('print("3 of 3 checks passed")\n')
+        open(bad_script, "w").write('import sys\nprint("2 of 3 checks passed")\nsys.exit(1)\n')
+        repo = os.path.join(root, "repo"); os.makedirs(repo)
+        git(repo, "init", "-q"); open(os.path.join(repo, "a.txt"), "w").write("a\n")
+        git(repo, "add", "a.txt"); git(repo, "commit", "-q", "-m", "a")
+
+        rec, fails = S.preconditions(repo, fw, ok_script)
+        check("preconditions: registered framework, clean checkout, checks pass -> may start",
+              fails == [] and rec["checks"] == "3 of 3 checks passed", fails)
+        open(os.path.join(repo, "untracked.json"), "w").write("{}")
+        check("preconditions: untracked files (data, outputs, a copied config) are allowed",
+              S.preconditions(repo, fw, ok_script)[1] == [])
+        rec, fails = S.preconditions(repo, fw, bad_script)
+        check("preconditions: failing checks stop the run (B4)", len(fails) == 1 and "failed (B4)" in fails[0], fails)
+        open(os.path.join(repo, "a.txt"), "a").write("edited\n")
+        rec, fails = S.preconditions(repo, fw, ok_script)
+        check("preconditions: an uncommitted change to a tracked file stops the run, before the checks run",
+              len(fails) == 1 and "uncommitted" in fails[0] and "a.txt" in fails[0] and "checks" not in rec, fails)
+        rec, fails = S.preconditions(root, fw, ok_script)
+        check("preconditions: outside a git checkout the run stops", any("not a git checkout" in f for f in fails), fails)
+
+        tampered = os.path.join(root, "relevance.py")
+        open(tampered, "wb").write(open(fw["relevance.py"], "rb").read() + b"\n")
+        git(repo, "checkout", "-q", "a.txt")
+        rec, fails = S.preconditions(repo, {**fw, "relevance.py": tampered}, ok_script)
+        check("preconditions: a changed framework file stops the run (A5)",
+              len(fails) == 1 and "relevance.py" in fails[0] and "checks" not in rec, fails)
+        rec, fails = S.preconditions(repo, {k: v for k, v in fw.items() if k != "temporal.py"}, ok_script)
+        check("preconditions: a missing framework file stops the run", len(fails) == 1 and "temporal.py" in fails[0], fails)
+
+
 def main():
-    for part in (check_decision_rule, check_synthetic, check_parsers, check_mapping, check_bm25, check_helpers, check_end_to_end):
+    for part in (check_decision_rule, check_synthetic, check_parsers, check_mapping, check_bm25, check_helpers,
+                 check_end_to_end, check_preconditions):
         print(f"\n# {part.__name__.removeprefix('check_').replace('_', ' ')}")
         part()
     failed = [n for n, ok in RESULTS if not ok]

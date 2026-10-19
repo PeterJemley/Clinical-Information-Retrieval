@@ -576,3 +576,19 @@ sizing errs on the conservative side.
       is read;
     - the fidelity checks in the Analysis section run inside Stage 1, and a failure stops
       the run before any judgment is read.
+- 2026-10-19, later the same day, still before any Stage 1 data were accessed: a real
+  Stage 1 run now checks the code it runs on, and will not start unless:
+  - the six framework files it imports match commit `7d752b1` byte for byte (A5);
+  - no tracked file has uncommitted changes, so the commit in the manifest is the code
+    that ran;
+  - `check_stage1.py` passes on the machine doing the run (B4).
+
+  The outcome is recorded in the manifest and in the generated report. A test-mode run
+  records the framework checksums without enforcing them.
+  - Continuous integration (GitHub Actions) now runs the framework tests and
+    `check_stage1.py` on every pull request and every push to `main`. Python, numpy, scipy
+    and pytest are pinned to the versions these checks were run with.
+  - scipy, which Stage 0 and Stage 1 need, is now declared as a dependency.
+  - `check_stage1.py` passes all 131 checks, also in a fresh environment with the pinned
+    versions. Mutation testing with nine new mutants aimed at these refusals: the checks
+    failed on 41 of 42. The one they passed is the same equivalent mutant as before.

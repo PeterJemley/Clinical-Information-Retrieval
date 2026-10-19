@@ -12,7 +12,9 @@ B2 manipulation check, saved; only then are judgments read, L cross-fitted, P sc
 decision rule applied.
 
 check_stage1.py tests every branch of the decision rule, the parsers, the sparse BM25 and a
-small end-to-end run on fixtures (B4). The real run refuses the stand-in encoder.
+small end-to-end run on fixtures (B4). The real run refuses the stand-in encoder, and it starts
+only if the framework files are the registered ones (A5), no tracked file has uncommitted
+changes, and check_stage1.py passes on the machine doing the run.
 """
 import argparse, array, csv, hashlib, json, math, os, platform, re, subprocess, sys, tarfile, time
 import urllib.parse, urllib.request
@@ -24,6 +26,8 @@ import scipy
 from scipy import sparse
 from scipy.optimize import minimize
 
+import clinical_ir
+from clinical_ir import relevance, retrieval, evaluate, evidence, temporal
 from clinical_ir.relevance import Document, Query, clinical_relevance, cosine_similarity, actionability_relevance
 from clinical_ir.retrieval import BM25
 from clinical_ir.evaluate import ndcg_at_k
@@ -39,6 +43,15 @@ MAX_PAIRS = 500
 MANIPULATION_MIN_SHARE = 0.5                   # Amendment 2, B2
 DATE_COVERAGE_MIN = 0.95                       # criterion 1
 AUGUST_BM25_NDCG = 0.3103001666796228          # A6 gate target on NFCorpus test
+FRAMEWORK_COMMIT = "7d752b1"                   # A5; byte-identical to 3b0dd21 (v0.1-august-eval)
+FRAMEWORK_SHA256 = {
+    "__init__.py": "bed12743feb0459c1616e95c6cf554e18435b1d90e6bcb67cc0e5880a467f0fe",
+    "evaluate.py": "a0ca71f3ed24c8136b835b556ba13224c351a3180ccf00ad55ad143b93fac8c9",
+    "evidence.py": "cff6fb5eaeeb18ca50c32c079fcd6b5cbc53178fb2f0caac637d9f455e3bee4f",
+    "relevance.py": "3070c6a19385e48d3a2f4bd68e885b57d900b18421628bd7d6a81b46444ecc14",
+    "retrieval.py": "7a3630a936a6fc6942a6e4d33ff97959b11ad868fb3f28362cf9367800c7f4e3",
+    "temporal.py": "5c4060304f71646a0df54ebb7e16d77c3902a2f67267b5dfe0ed936c0f174849",
+}
 
 MODULES = ["bm25", "topical", "evidence", "temporal", "applicability", "actionability"]
 GATES = {  # registered gate table
@@ -544,6 +557,43 @@ def manipulation_check(topics, top10, evidence_varies):
             "threshold": MANIPULATION_MIN_SHARE, "passed": bool(diag) and share >= MANIPULATION_MIN_SHARE}
 
 
+# ---------- preconditions of a real run ----------
+def framework_files():
+    """The framework files this process actually imported."""
+    return {os.path.basename(m.__file__): m.__file__ for m in (clinical_ir, relevance, retrieval, evaluate, evidence, temporal)}
+
+
+def a6_target(test_mode):
+    return None if test_mode else AUGUST_BM25_NDCG
+
+
+def preconditions(repo_dir, framework, checks_script):
+    """A real run starts only on the registered framework (A5), with no uncommitted change to a
+    tracked file, and with check_stage1.py passing on this machine (B4). Returns (record, failures)."""
+    rec, failures = {"framework_commit": FRAMEWORK_COMMIT}, []
+    rec["framework_sha256"] = {n: sha256_file(p) for n, p in sorted(framework.items())}
+    bad = sorted(n for n in set(rec["framework_sha256"]) | set(FRAMEWORK_SHA256)
+                 if rec["framework_sha256"].get(n) != FRAMEWORK_SHA256.get(n))
+    if bad:
+        failures.append(f"framework files differ from commit {FRAMEWORK_COMMIT} (A5): {bad}")
+    try:
+        st = subprocess.run(["git", "-C", repo_dir, "status", "--porcelain", "--untracked-files=no"],
+                            capture_output=True, text=True)
+    except OSError:
+        st = None
+    if st is None or st.returncode != 0:
+        failures.append("not a git checkout, so the run cannot record which code it ran")
+    elif st.stdout.strip():
+        failures.append("uncommitted changes to tracked files (copy CONFIG_EXAMPLE.json rather than editing it): "
+                        + ", ".join(l[3:] for l in st.stdout.splitlines()[:5]))
+    if not failures:
+        r = subprocess.run([sys.executable, checks_script], capture_output=True, text=True)
+        rec["checks"] = (r.stdout.strip().splitlines() or [""])[-1]
+        if r.returncode != 0:
+            failures.append(f"{os.path.basename(checks_script)} failed (B4): {rec['checks']}")
+    return rec, failures
+
+
 # ---------- the run ----------
 def resolve(cfg_dir, p):
     return p if os.path.isabs(p) else os.path.join(cfg_dir, p)
@@ -569,16 +619,25 @@ def run(config_path, out, cache, test_mode=False, fake_encoder=False):
     if fake_encoder and not test_mode:
         raise SystemExit("The stand-in encoder is for check_stage1.py only (Amendment 2, B4).")
     t0, started, events = time.time(), datetime.now(timezone.utc).isoformat(timespec="seconds"), []
+    if test_mode:
+        code = {"framework_sha256": {n: sha256_file(p) for n, p in sorted(framework_files().items())},
+                "enforced": False}
+    else:
+        code, failures = preconditions(HERE, framework_files(), os.path.join(HERE, "check_stage1.py"))
+        if failures:
+            raise SystemExit("Stage 1 will not start: " + "; ".join(failures))
+        code["enforced"] = True
+    log(f"Code preconditions: {code}", events)
     cfg_dir = os.path.dirname(os.path.abspath(config_path))
     cfg = json.load(open(config_path))
     os.makedirs(os.path.join(out, "runs"), exist_ok=True)
-    R = {"stage": "1", "test_mode": test_mode, "fidelity": {}, "preconditions": {}}
+    R = {"stage": "1", "test_mode": test_mode, "fidelity": {}, "preconditions": {"code": code}}
 
     # 1. Gates (A5 is in check_stage1.py and repeated here; A6 on NFCorpus test).
     bad = [c for c, e in [(["Randomized Controlled Trial", "Clinical Trial"], EvidenceLevel.RCT),
                           (["Meta-Analysis"], EvidenceLevel.SYSTEMATIC_REVIEW), (["Review"], None)] if pt_to_level(c) != e]
     assert not bad, f"A5 mapping failed on {bad}"
-    gate = a6_gate(resolve(cfg_dir, cfg["nfcorpus"]), None if test_mode else AUGUST_BM25_NDCG)
+    gate = a6_gate(resolve(cfg_dir, cfg["nfcorpus"]), a6_target(test_mode))
     R["fidelity"]["a6_sparse_bm25_gate"] = gate
     log(f"A6 gate: {gate}", events)
     if not gate["passed"]:
@@ -789,7 +848,8 @@ def run(config_path, out, cache, test_mode=False, fake_encoder=False):
         commit = None
     manifest = {"stage": "1", "test_mode": test_mode, "started": started,
                 "finished": datetime.now(timezone.utc).isoformat(timespec="seconds"), "code_commit": commit,
-                "script_sha256": sha256_file(os.path.abspath(__file__)), "config": cfg, "data_sha256": data_sha,
+                "script_sha256": sha256_file(os.path.abspath(__file__)), "code_preconditions": code,
+                "config": cfg, "data_sha256": data_sha,
                 "encoders": {k: {"name": v[0], "revision": v[1], "pooling": v[2], "max_length": v[3]} for k, v in ENCODERS.items()},
                 "fake_encoder": fake_encoder,
                 "embeddings_sha256": {os.path.basename(p): sha256_file(p) for p in enc.paths.values() if os.path.exists(p)},
@@ -811,7 +871,10 @@ def write_report(R, path):
     lines += [f"- {q}" for q in R["qualifiers"]]
     if R["L"]["boundary_limitation"]:
         lines.append("- L chose the smallest penalty in the grid in at least one fold; reported as a limitation (B1).")
+    c = R["preconditions"]["code"]
     lines += ["", "## Preconditions", "",
+              (f"- Code: framework files match commit {c['framework_commit']} (A5); no uncommitted change to a tracked "
+               f"file; check_stage1.py: {c['checks']}." if c["enforced"] else "- Code preconditions: not enforced (test mode)."),
               f"- Manipulation check (B2): M's top 10 differs from U's on {m['share_M_top10_differs_from_U']:.3f} of "
               f"{m['diagnosis_test_topics']} diagnosis/test topics (threshold {m['threshold']}): "
               f"{'passed' if m['passed'] else 'FAILED'}.",

@@ -1,0 +1,5 @@
+# Versions CI installs: those the Stage 0 pilot and the Stage 1 checks ran with.
+# Pinned so that a new release cannot turn CI red without a change here.
+numpy==2.4.6
+scipy==1.17.1
+pytest==9.1.1
