@@ -11,10 +11,13 @@ Checks for stage1.py. They must pass before any Stage 1 data are accessed (Amend
    NCBI efetch XML.
 4. The A5 publication-type mapping.
 5. The sparse BM25 against the repository's BM25 on a synthetic corpus with ties.
-6. The B2 manipulation check, and the scoring helpers.
+6. The B2 manipulation check, the scoring helpers, F's documents (B5), and L's cross-fitting:
+   a topic's held-out scores must not change when its own judgments are reversed.
 7. A small end-to-end run on fixture data with the stand-in encoder: outputs, the B3 order,
    determinism, and the refusals (stand-in encoder outside test mode, a changed data file, a
    missing reference date, the A6 gate's target in a real run, judgments that cannot be read).
+   B0, M, U, V and R are recomputed from the saved module scores with the gate table parsed
+   from PREREGISTRATION.md, not with stage1.py's copy of it.
 
 Everything is generated here; nothing is downloaded.
 """
@@ -25,7 +28,8 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import stage1 as S  # noqa: E402
-from clinical_ir.relevance import Document  # noqa: E402
+from clinical_ir.relevance import Document, Query, clinical_relevance  # noqa: E402
+from clinical_ir.evaluate import ndcg_at_k  # noqa: E402
 from clinical_ir.retrieval import BM25  # noqa: E402
 from clinical_ir.evidence import EvidenceLevel as EL  # noqa: E402
 from clinical_ir.temporal import temporal_decay  # noqa: E402
@@ -36,6 +40,20 @@ RESULTS = []
 def check(name, cond, detail=""):
     RESULTS.append((name, bool(cond)))
     print(f"{'ok  ' if cond else 'FAIL'} {name}{'' if cond else f'  ({detail})'}", flush=True)
+
+
+def registered_gates():
+    """The gate table as printed in PREREGISTRATION.md: ({column: {module: gate}}, column order)."""
+    text = open(os.path.join(HERE, "..", "PREREGISTRATION.md"), encoding="utf-8").read()
+    rows = [l for l in text.split("### Gate table (Type B, fixed here)", 1)[1].splitlines() if l.startswith("|")][:8]
+    cells = lambda l: [c.strip() for c in l.strip().strip("|").split("|")]
+    cols = [{"diagnosis / test": "diagnosis_test"}.get(h, h) for h in cells(rows[0])[1:]]
+    gates = {c: {} for c in cols}
+    for l in rows[2:]:
+        row = cells(l)
+        for c, v in zip(cols, row[1:]):
+            gates[c][row[0].lower()] = int(v)
+    return gates, cols
 
 
 # ---------- 1. the decision rule ----------
@@ -336,6 +354,49 @@ def check_helpers():
     check("gated: an off module contributes nothing", np.allclose(g, Z[[0, 1, 2, 3, 5]].sum(0)))
     check("temporal: a document with no date gets tau = 1 in F (B5)", temporal_decay(datetime(2014, 1, 21), datetime(2014, 1, 21)) == 1.0)
     check("L grid (B1)", S.LAMBDAS == [0.001, 0.01, 0.1, 1, 10], S.LAMBDAS)
+    ex = json.load(open(os.path.join(HERE, "CONFIG_EXAMPLE.json")))
+    check("CONFIG_EXAMPLE.json: has what run reads, and cannot run until the 2014 date is entered (B6)",
+          {"nfcorpus", "years", "collections"} <= set(ex)
+          and all({"topics", "qrels", "collection"} <= set(y) and y["collection"] in ex["collections"] for y in ex["years"].values())
+          and all({"corpus", "pubtypes", "reference_date"} <= set(c) for c in ex["collections"].values())
+          and ex["collections"]["pmc-2014"]["reference_date"] == "", ex)
+    G, cols = registered_gates()
+    check("gate table: stage1.py's copy equals the registered table, columns in registered order",
+          S.GATES == G and S.TYPES == cols and set(S.MODULES) == set(G["treatment"]), (S.GATES, G))
+
+    ref = datetime(2014, 1, 21)
+    ds = [{"_id": i, "title": "A randomized trial", "abstract": "of a dose", "pub_date": p}
+          for i, p in (("old", "2000-06-01"), ("new", "2013-06-01"), ("undated", None))]
+    dF = S.f_documents(ds, {i: np.ones(4) for i in ("old", "new", "undated")}, ref)
+    sc = {d.id: clinical_relevance(d, Query(text="q", embedding=np.ones(4)), query_time=ref) for d in dF}
+    check("F: each document's own date; no date gives tau = 1 (B5)",
+          sc["undated"] > sc["new"] > sc["old"] and dF[2].publication_date == ref, sc)
+    check("F: evidence from version 0.1's keyword classifier (B5)", all(d.evidence_level == EL.RCT for d in dF))
+
+    def fixture_L(flip=None):
+        rng = np.random.default_rng(5)
+        common, qids, items, qrels = rng.standard_normal(30), [f"t{i}" for i in range(10)], {}, {}
+        for q in qids:
+            X = rng.standard_normal((50, 30))
+            g = np.zeros(50); g[np.argsort(-(X @ common))[:5]] = 1
+            if q == flip:
+                g = 1 - g  # this topic's judgments reversed
+            items[q] = (X, np.argwhere(g[:, None] > g[None, :]))
+            qrels[q] = {str(i): g[i] for i in range(50)}
+        nd = lambda q, sc: ndcg_at_k([str(i) for i in np.argsort(-sc, kind="stable")], qrels[q], 10)
+        return qids, items, nd
+    qids, items, nd = fixture_L()
+    base, info = S.cross_fit_L(qids, items, nd)
+    check("L: cross-fitting learns a signal shared across topics (held-out NDCG@10 > 0.8)",
+          np.mean([nd(q, base[q]) for q in qids]) > 0.8, np.mean([nd(q, base[q]) for q in qids]))
+    check("L: the five outer folds partition the topics",
+          sorted(q for f in info for q in f["test_topics"]) == sorted(qids), [f["test_topics"] for f in info])
+    leaks = []
+    for q in ("t0", "t4", "t9"):
+        flipped, _ = S.cross_fit_L(*fixture_L(flip=q))
+        if not np.array_equal(flipped[q], base[q]):
+            leaks.append(q)
+    check("L: a topic's held-out scores are unchanged when its own judgments are reversed", not leaks, leaks)
     with tempfile.TemporaryDirectory() as d:
         enc = S.Encoder(d, fake=True)
         a1, a2 = enc(["one", "two"], "medcpt_query"), enc(["one", "two"], "medcpt_query")
@@ -439,6 +500,62 @@ def write_fixture(root):
     return cfg
 
 
+def read_trec(path):
+    run = {}
+    for line in open(path):
+        q, _, d, _, _, _ = line.split()
+        run.setdefault(q, []).append(d)
+    return run
+
+
+def check_recomputed(out, R):
+    """B0, M, U, V and R recomputed from the saved module scores and the registered gate table."""
+    G, cols = registered_gates()
+    Zs = np.load(os.path.join(out, "module_scores.npz"))
+    runs = {a: read_trec(os.path.join(out, "runs", f"{a}.trec")) for a in ["B0", "M", "U", "V"] +
+            [f"{x}{s}" for x in "NR" for s in S.SEEDS]}
+    types = ["diagnosis", "test", "treatment"] * 2  # the fixture's topics, numbered 1-6 in each year
+    col_of = {f"{y}-{n}": "treatment" if types[n - 1] == "treatment" else "diagnosis_test"
+              for y in ("2014", "2015", "2016") for n in range(1, 7)}
+    off_of = {q: {"applicability"} | ({"temporal"} if q.startswith("2016") else set()) for q in col_of}  # A5, B5
+
+    def rerank(q, gates):
+        Z, pool, total = Zs[q], runs["B0"][q], np.zeros(Zs[q].shape[1])
+        for i, m in enumerate(S.MODULES):
+            if gates[m] and m not in off_of[q]:
+                total = total + Z[i]
+        return [pool[i] for i in np.argsort(-total, kind="stable")]
+
+    shapes = all(Zs[q].shape == (6, 100) for q in col_of) and set(Zs.files) == set(col_of)
+    bm25_row = all(np.all(np.diff(Zs[q][S.MODULES.index("bm25")]) <= 0) for q in col_of)
+    scaled = all(np.allclose(r, 0) or (abs(r.mean()) < 1e-9 and abs(r.std() - 1) < 1e-9) for q in col_of for r in Zs[q])
+    check("recomputed: module scores saved for every topic, z-scored, BM25 row in pool order", shapes and bm25_row and scaled)
+    all_on = {m: 1 for m in S.MODULES}
+    no_ev = {m: int(m != "evidence") for m in S.MODULES}
+    for arm, gates_of in (("M", lambda q: G[col_of[q]]), ("U", lambda q: all_on), ("V", lambda q: no_ev)):
+        bad = [q for q in col_of if runs[arm][q] != rerank(q, gates_of(q))]
+        check(f"recomputed: {arm} from the registered gate table", not bad, bad[:3])
+    moved = sum(runs["M"][q] != runs["U"][q] for q in col_of if col_of[q] == "diagnosis_test")
+    check("recomputed: gating evidence off changes M on some diagnosis/test topics (not vacuous)", moved > 0, moved)
+
+    effective = lambda q, c: {m: G[c][m] for m in S.MODULES if m not in off_of[q]}
+    differs, bad = 0, []
+    for s in S.SEEDS:
+        perm = [cols[i] for i in np.random.default_rng(s).permutation(len(cols))]
+        if R["R_permutations"][str(s)] != perm:
+            bad.append(f"permutation {s}")
+        col_for = dict(zip(cols, perm))
+        for q in col_of:
+            differs += effective(q, col_for[col_of[q]]) != effective(q, col_of[q])
+            if runs[f"R{s}"][q] != rerank(q, G[col_for[col_of[q]]]):
+                bad.append(f"R{s} {q}")
+    check("recomputed: R from seeded permutations of the registered columns (A12)", not bad, bad[:3])
+    check("recomputed: R moves some topics to a column with different gates (not vacuous)", differs > 0, differs)
+    same = [s for s in S.SEEDS if sum(runs[f"N{s}"][q] == runs["M"][q] for q in col_of) > len(col_of) / 2]
+    check("N: noise modules change the ranking on most topics, for every seed", not same, same)
+    check("N: seeds give different rankings", len({json.dumps(runs[f"N{s}"]) for s in S.SEEDS}) == len(S.SEEDS))
+
+
 def cli(*args):
     return subprocess.run([sys.executable, os.path.join(HERE, "stage1.py"), *args], capture_output=True, text=True)
 
@@ -512,6 +629,7 @@ def check_end_to_end():
         check("run: manifest has every data checksum, the script checksum and the stand-in flag",
               set(man["data_sha256"]) == want and man["fake_encoder"] is True
               and man["script_sha256"] == S.sha256_file(os.path.join(HERE, "stage1.py")), set(man["data_sha256"]) ^ want)
+        check_recomputed(out1, R)
         report = open(os.path.join(out1, "RESULTS.md")).read()
         check("run: generated report is marked as test mode", "TEST MODE" in report and R["verdict"] in report)
 

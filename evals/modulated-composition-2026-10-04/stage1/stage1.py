@@ -7,8 +7,9 @@ Subcommands
   run               the preregistered analysis, from a JSON configuration (see CONFIG_EXAMPLE.json)
 
 Order inside `run` (Amendment 2, B3): fidelity gates; data checksums; every ranking that needs
-no judgment (B0, F, M, U, V, N, R), saved as run files; the B2 manipulation check, saved; only
-then are judgments read, L cross-fitted, P scored and the decision rule applied.
+no judgment (B0, F, M, U, V, N, R), saved as run files with the module scores behind them; the
+B2 manipulation check, saved; only then are judgments read, L cross-fitted, P scored and the
+decision rule applied.
 
 check_stage1.py tests every branch of the decision rule, the parsers, the sparse BM25 and a
 small end-to-end run on fixtures (B4). The real run refuses the stand-in encoder.
@@ -405,6 +406,14 @@ def rank_by(score, pool_ids):
     return [pool_ids[i] for i in np.argsort(-np.asarray(score), kind="stable")]
 
 
+def f_documents(ds, emb, ref):
+    """F's documents (A7, B5): each document's own publication date, or the reference date if it
+    has none (so tau = 1); evidence_level unset, so version 0.1's keyword classifier applies."""
+    return [Document(id=d["_id"], title=d["title"], abstract=d["abstract"], content_embedding=emb[d["_id"]],
+                     publication_date=datetime.strptime(d["pub_date"], "%Y-%m-%d") if d.get("pub_date") else ref)
+            for d in ds]
+
+
 def l_features(Z, column):
     ind = np.array([1.0 if t == column else 0.0 for t in TYPES])
     return np.hstack([Z.T, np.kron(ind, Z.T)])
@@ -444,6 +453,24 @@ def cv_choose_lambda(items, ndcg_of):
         cv[lam] = float(np.mean(vals)) if vals else float("-inf")
     best = max(LAMBDAS, key=lambda l: (cv[l], -LAMBDAS.index(l)))
     return best, cv
+
+
+def cross_fit_L(qids, items, ndcg_of):
+    """A12/B5: 5 outer folds over topics (seed 0). In each, the penalty is chosen by 5-fold CV
+    inside the training topics and the model refit on them. Returns each topic's held-out scores."""
+    outer = np.array_split(np.random.default_rng(0).permutation(len(qids)), 5)
+    scores, info = {}, []
+    for k in range(5):
+        test_q = [qids[j] for j in outer[k]]
+        train_q = [q for q in qids if q not in set(test_q)]
+        lam, cv = cv_choose_lambda([(items[q][0], items[q][1], q) for q in train_q], ndcg_of)
+        Xp = pairs_for([items[q] for q in train_q], np.random.default_rng(0))
+        w = fit_rank(Xp, lam) if len(Xp) else np.zeros(items[qids[0]][0].shape[1])
+        for q in test_q:
+            scores[q] = items[q][0] @ w
+        info.append({"fold": k, "test_topics": test_q, "lambda": lam, "cv": {str(a): b for a, b in cv.items()},
+                     "at_lower_boundary": lam == min(LAMBDAS)})
+    return scores, info
 
 
 # ---------- statistics and the decision rule ----------
@@ -551,7 +578,7 @@ def run(config_path, out, cache, test_mode=False, fake_encoder=False):
     bad = [c for c, e in [(["Randomized Controlled Trial", "Clinical Trial"], EvidenceLevel.RCT),
                           (["Meta-Analysis"], EvidenceLevel.SYSTEMATIC_REVIEW), (["Review"], None)] if pt_to_level(c) != e]
     assert not bad, f"A5 mapping failed on {bad}"
-    gate = a6_gate(resolve(cfg_dir, cfg["nfcorpus"]), None if test_mode else cfg.get("nfcorpus_expected_ndcg10", AUGUST_BM25_NDCG))
+    gate = a6_gate(resolve(cfg_dir, cfg["nfcorpus"]), None if test_mode else AUGUST_BM25_NDCG)
     R["fidelity"]["a6_sparse_bm25_gate"] = gate
     log(f"A6 gate: {gate}", events)
     if not gate["passed"]:
@@ -654,6 +681,7 @@ def run(config_path, out, cache, test_mode=False, fake_encoder=False):
                                               publication_date=r["ref"], evidence_level=EvidenceLevel.RCT), None) for d in ds])}
         raw[q]["modules"] = raw_mod
         Zs[q] = np.vstack([z(raw_mod[m]) for m in MODULES])
+    np.savez_compressed(os.path.join(out, "module_scores.npz"), **{q: Zs[q] for q in qids})  # rows: MODULES; columns: pool order
 
     # 7. Judgment-free rankings (B3).
     perm = {s: np.random.default_rng(s).permutation(len(TYPES)) for s in SEEDS}
@@ -670,9 +698,7 @@ def run(config_path, out, cache, test_mode=False, fake_encoder=False):
         rankings["V"][q] = rank_by(gated(Z, {m: int(m != "evidence") for m in MODULES}, off[q]), pids)
         qF = Query(text=t["summary"], embedding=E_qp[q])
         ref = raw[q]["ref"]
-        dF = [Document(id=d["_id"], title=d["title"], abstract=d["abstract"], content_embedding=E_pmb[d["_id"]],
-                       publication_date=datetime.strptime(d["pub_date"], "%Y-%m-%d") if d.get("pub_date") else ref)
-              for d in ds]
+        dF = f_documents(ds, E_pmb, ref)
         sF = [clinical_relevance(d, qF, query_time=ref) for d in dF]
         indep = [temporal_decay(d.publication_date, ref, "pbm") * evidence_weight(d.evidence_level)
                  * (0.5 * cosine_similarity(d.content_embedding, qF.embedding) + 0.3 * 0.5
@@ -727,18 +753,8 @@ def run(config_path, out, cache, test_mode=False, fake_encoder=False):
     items = {q: (l_features(Zs[q], t["column"]), np.argwhere(grades_of(q)[:, None] > grades_of(q)[None, :]))
              for t in topics for q in [t["qid"]]}
     nd_scores = lambda q, sc: ndcg_at_k(rank_by(sc, pools[q]), qrels[q], K)
-    outer = np.array_split(np.random.default_rng(0).permutation(len(qids)), 5)
-    rankings["L"], L_info = {}, []
-    for k in range(5):
-        test_q = [qids[j] for j in outer[k]]
-        train_q = [q for q in qids if q not in set(test_q)]
-        lam, cv = cv_choose_lambda([(items[q][0], items[q][1], q) for q in train_q], nd_scores)
-        Xp = pairs_for([items[q] for q in train_q], np.random.default_rng(0))
-        w = fit_rank(Xp, lam) if len(Xp) else np.zeros(30)
-        for q in test_q:
-            rankings["L"][q] = rank_by(items[q][0] @ w, pools[q])
-        L_info.append({"fold": k, "lambda": lam, "cv": {str(a): b for a, b in cv.items()},
-                       "at_lower_boundary": lam == min(LAMBDAS)})
+    L_scores, L_info = cross_fit_L(qids, items, nd_scores)
+    rankings["L"] = {q: rank_by(L_scores[q], pools[q]) for q in qids}
     R["L"] = {"folds": L_info, "boundary_limitation": any(f["at_lower_boundary"] for f in L_info)}
     for s in SEEDS:
         rankings[f"P{s}"] = {}

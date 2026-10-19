@@ -1,0 +1,15 @@
+{
+  "_note": "Configuration for `stage1.py run`. Paths are relative to this file. File names are placeholders; every input is checksummed into the run manifest.",
+  "nfcorpus": "data/nfcorpus",
+  "years": {
+    "2014": {"topics": "data/topics-2014.xml", "qrels": "data/qrels-2014.txt", "collection": "pmc-2014"},
+    "2015": {"topics": "data/topics-2015-A.xml", "qrels": "data/qrels-2015.txt", "collection": "pmc-2014",
+             "_note": "A11: confirm from track documentation that 2015 was judged against the 2014 collection."},
+    "2016": {"topics": "data/topics-2016.xml", "qrels": "data/qrels-2016.txt", "collection": "pmc-2016"}
+  },
+  "collections": {
+    "pmc-2014": {"corpus": "data/pmc-2014.jsonl", "pubtypes": "data/pmc-2014-pubtypes.jsonl", "reference_date": "",
+                 "_note": "A11 and B6: the 2014 snapshot date must be confirmed from documentation and entered here; the run refuses an empty date."},
+    "pmc-2016": {"corpus": "data/pmc-2016.jsonl", "pubtypes": "data/pmc-2016-pubtypes.jsonl", "reference_date": "2016-03-28"}
+  }
+}
