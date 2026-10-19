@@ -556,3 +556,23 @@ sizing errs on the conservative side.
 - 2026-10-18: Amendment 2 committed, before any Stage 1 data were accessed. It was written
   after the Stage 0 results were seen, and B1 responds to them. The Stage 1 script and its
   checks (B4) are committed separately, also before any Stage 1 data are accessed.
+- 2026-10-19: the Stage 1 script and its checks committed in `ba1eb39` and `767ed19`, before
+  any Stage 1 data were accessed.
+  - `stage1/check_stage1.py` passes all 119 checks.
+  - The checks were mutation-tested: 33 bugs were planted in `stage1.py`, one at a time, and
+    the checks failed on 32. The one they passed gives identical scores, so no test can
+    catch it. An earlier round found five gaps, closed in `767ed19`. Among them, the checks
+    now recompute M, U, V and R from saved module scores and the gate table above.
+  - The A6 gate, re-run with the final sparse BM25 on the NFCorpus test queries, gives the
+    same top 100 for 323 of 323 queries and NDCG@10 = 0.3103001666796228.
+  - Choices the plan left open, fixed in the script. None changes M, the gate table, the
+    modules or the decision rule:
+    - a document's identifier is its NXML file name, the PMCID the track's judgments use,
+      with the article's own PMC identifier as the fallback. Disagreements are counted in
+      the corpus metadata;
+    - the A6 target is fixed in the code and cannot be changed in the run configuration;
+    - a judgment file line that is not four-column TREC format stops the run;
+    - the module scores behind every judgment-free ranking are saved before any judgment
+      is read;
+    - the fidelity checks in the Analysis section run inside Stage 1, and a failure stops
+      the run before any judgment is read.
