@@ -543,6 +543,99 @@ calibrated on NFCorpus:
 Stage 0's paired SD for M − B0 was 0.084, below the 0.10 used for sizing, so the registered
 sizing errs on the conservative side.
 
+### Amendment 3 (committed 2026-11-11): the A11 facts, and what they mean for Stage 1
+
+**Status:** committed before any Stage 1 data were accessed. The facts come from the track's
+own web pages and its three overview papers, read on 2026-11-11. No topic file, judgment
+file or collection was opened. Nothing here changes M, the gate table or the 0.05 bar. C6
+adds four entries to the A5 evidence mapping.
+
+**C1. The A11 facts.**
+- **2015 used the 2014 collection.** The 2015 track page says: "For continuity with last
+  year's track, we will be using the same snapshot." The 2015 overview gives the same date
+  and article count.
+- **The 2014 snapshot is dated 21 January 2014** and holds 733,138 articles, according to
+  the 2014 track page and overview. It is the reference date for the 2014 and 2015 topics
+  (A5).
+- **Each year has 10 topics of each type.** All three overviews say that topics 1–10 are
+  diagnosis, 11–20 test and 21–30 treatment. The 2016 track page said "10 to 15" per type,
+  but that was before the topics were released.
+- **The judging guidelines do not mention currency or study design.**
+  - In all three years, an article was definitely relevant if it provided information of
+    the specified type, relevant to the particular patient. Assessors were told to judge an
+    article relevant "if there was a reasonable chance a physician might find the article
+    useful having seen the patient described in the topic".
+  - An article was possibly relevant if it was "not immediately informative on its own" but
+    might be relevant in a broader literature review.
+  - Neither publication date nor study design appears in the guidelines.
+
+Sources:
+- The track pages at trec-cds.org (2014.html, 2015.html, 2016.html).
+- The three track overview papers:
+  - Simpson, M. S., Voorhees, E. M., & Hersh, W. (2014). Overview of the TREC 2014 Clinical
+    Decision Support Track. TREC 2014. https://trec.nist.gov/pubs/trec23/papers/overview-clinical.pdf
+  - Roberts, K., Simpson, M. S., Voorhees, E. M., & Hersh, W. R. (2015). Overview of the
+    TREC 2015 Clinical Decision Support Track. TREC 2015. https://trec.nist.gov/pubs/trec24/papers/Overview-CL.pdf
+  - Roberts, K., Demner-Fushman, D., Voorhees, E. M., & Hersh, W. R. (2016). Overview of the
+    TREC 2016 Clinical Decision Support Track. TREC 2016. https://trec.nist.gov/pubs/trec25/papers/Overview-CL.pdf
+
+**C2. Criterion 3 is not met, so attribution cannot be tested on this corpus.**
+- As the plan provides, the temporal and evidence parts of the claim are declared
+  untestable.
+- The plan then says the test "measures only whether gating the other modules helps". On
+  these topics that cannot be measured either. The two columns in use differ only in the
+  evidence module (A8), so M − U and M − V both measure evidence gating.
+- What Stage 1 can still test is the gain: M − B0 against the 0.05 bar, and M against F.
+  Refuted keeps its full meaning.
+- **The verdict is capped.** The decision rule is applied as registered. If it gives
+  Supported, the reported verdict is **Gain without attribution**, with a qualifier saying
+  that Supported's conditions were met but attribution is untestable here. Both verdicts
+  are recorded. Every other verdict is unchanged.
+- M − U, M − V and the B2 manipulation check are still computed and reported as registered.
+
+**C3. Unjudged documents.**
+- The judgment pools were sampled from participants' runs: every document in ranks 1–20
+  (1–15 in 2016), plus a 20% sample of ranks 21–100. None of this test's configurations was
+  pooled, so their top 10s will contain unjudged documents.
+- **The primary metric stays as registered:** NDCG@10, with unjudged documents counted as
+  not relevant. Judgments come from the `qrels-treceval` files, which are four-column and
+  list every judged document. The `qrels-sampleval` files are not used.
+- **Reported alongside, without changing the verdict:**
+  - for each configuration, the share of its top 10 that was judged;
+  - NDCG@10 on condensed lists, which drop unjudged documents from a ranking before scoring
+    it (Sakai, 2007).
+- The decision rule is also applied to the condensed scores. If it gives a different
+  verdict, that is reported as a qualifier.
+- This is a sensitivity check, not a correction. Condensed lists are not reliably better
+  when the pools are biased towards particular systems (Sakai, 2009), as they are here.
+  - Sakai, T. (2007). Alternatives to bpref. *SIGIR '07*, 71–78.
+    https://doi.org/10.1145/1277741.1277756
+  - Sakai, T. (2009). On the robustness of information retrieval metrics to biased
+    relevance assessments. *Journal of Information Processing*, 17, 156–166.
+    https://doi.org/10.2197/ipsjjip.17.156
+
+**C4. Duplicates.** The 2014 track lists files it did not judge because they duplicate
+other files. They are left in the collection as distributed, and count as unjudged.
+
+**C5. Topic types are checked against topic numbers.** Before any judgment is read, the run
+checks that each topic's type label matches its number (C1). If any does not, the run
+stops.
+
+**C6. Phase-specific trial types are added to the A5 mapping.**
+- "Clinical Trial, Phase I", "Clinical Trial, Phase II", "Clinical Trial, Phase III" and
+  "Clinical Trial, Phase IV" map to CONTROLLED_OBSERVATIONAL.
+- As before, the highest level applies, so an article that is also a "Randomized Controlled
+  Trial" counts as RCT.
+- This is a design choice (Type B), made from MEDLINE's list of publication types before any
+  data were seen.
+- Because the evidence part is untestable here (C2), the change affects which documents M
+  ranks highest, but it cannot support or refute that part of the claim.
+
+**C7. Where the data come from.** The track pages link the collections to folders on an NLM
+server set up for the track. The runner checks that those links still work before
+downloading anything. If they do not, the replacement source is recorded in an amendment
+before any download. Publication types are fetched for the whole corpus, as B6 registered.
+
 ### Log
 
 - 2026-10-08: Stage 0 ran with script `5bbf58a`, from 00:59 to 01:23 UTC. The results are

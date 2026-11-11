@@ -1,5 +1,5 @@
 """
-Stage 1 of the modulated-composition test: ../PREREGISTRATION.md, Amendments 1 and 2.
+Stage 1 of the modulated-composition test: ../PREREGISTRATION.md, Amendments 1, 2 and 3.
 
 Subcommands
   prepare-corpus    PMC Open Access NXML (.tar.gz files or directories) -> corpus.jsonl (+ .meta.json)
@@ -41,6 +41,7 @@ N_BOOT = N_PERM = 10_000
 LAMBDAS = [0.001, 0.01, 0.1, 1, 10]          # Amendment 2, B1
 MAX_PAIRS = 500
 MANIPULATION_MIN_SHARE = 0.5                   # Amendment 2, B2
+ATTRIBUTION_TESTABLE = False                   # Amendment 3, C2: the judging guidelines reward neither currency nor study design
 DATE_COVERAGE_MIN = 0.95                       # criterion 1
 AUGUST_BM25_NDCG = 0.3103001666796228          # A6 gate target on NFCorpus test
 FRAMEWORK_COMMIT = "7d752b1"                   # A5; byte-identical to 3b0dd21 (v0.1-august-eval)
@@ -75,6 +76,10 @@ PT_LEVEL = {
     "Randomized Controlled Trial": EvidenceLevel.RCT,
     "Controlled Clinical Trial": EvidenceLevel.CONTROLLED_OBSERVATIONAL,
     "Clinical Trial": EvidenceLevel.CONTROLLED_OBSERVATIONAL,
+    "Clinical Trial, Phase I": EvidenceLevel.CONTROLLED_OBSERVATIONAL,     # Amendment 3, C6
+    "Clinical Trial, Phase II": EvidenceLevel.CONTROLLED_OBSERVATIONAL,
+    "Clinical Trial, Phase III": EvidenceLevel.CONTROLLED_OBSERVATIONAL,
+    "Clinical Trial, Phase IV": EvidenceLevel.CONTROLLED_OBSERVATIONAL,
     "Observational Study": EvidenceLevel.CONTROLLED_OBSERVATIONAL,
     "Comparative Study": EvidenceLevel.CONTROLLED_OBSERVATIONAL,
     "Case Reports": EvidenceLevel.UNCONTROLLED_OBSERVATIONAL,
@@ -190,6 +195,12 @@ def parse_topics(text, year):
         out.append({"qid": f"{year}-{number}", "year": str(year), "number": number, "type": kind,
                     "column": TOPIC_TYPE_TO_COLUMN.get(kind), "summary": summary})
     return out
+
+
+def expected_type(number):
+    """Amendment 3, C1/C5: in every year, topics 1-10 are diagnosis, 11-20 test, 21-30 treatment."""
+    n = int(number) if str(number).isdigit() else 0
+    return "diagnosis" if 1 <= n <= 10 else "test" if 11 <= n <= 20 else "treatment" if 21 <= n <= 30 else None
 
 
 def parse_qrels(text, year):
@@ -524,6 +535,27 @@ def decide(primary, sec, controls, manipulation_ok):
     return "Inconclusive"
 
 
+def cap(verdict, attribution_testable=ATTRIBUTION_TESTABLE):
+    """Amendment 3, C2: where attribution is untestable, Supported is reported as Gain without attribution."""
+    return "Gain without attribution" if verdict == "Supported" and not attribution_testable else verdict
+
+
+def condensed(ranking, judged):
+    """Sakai (2007): the ranking with unjudged documents removed (Amendment 3, C3)."""
+    return [d for d in ranking if d in judged]
+
+
+def judged_at_k(ranking, judged, k=K):
+    return sum(d in judged for d in ranking[:k]) / k
+
+
+def unjudged_qualifier(condensed_verdict, verdict):
+    if condensed_verdict != verdict:
+        return (f"With unjudged documents removed from each ranking (condensed lists), the decision rule gives "
+                f"{condensed_verdict} (Amendment 3, C3).")
+    return None
+
+
 def analyze(A, manipulation_ok):
     """A: per-topic NDCG arrays for B0, F, M, U, V, L, N0..N4, R0..R4, P0..P4 (same topic order)."""
     Nbar = np.mean([A[f"N{s}"] for s in SEEDS], 0)
@@ -536,8 +568,12 @@ def analyze(A, manipulation_ok):
     for k, p in zip(sec, holm([sec[k]["p"] for k in sec])):
         sec[k]["p_holm"] = p
     controls = {"Nbar-B0": paired(Nbar - A["B0"]), "Pbar-M": paired(Pbar - A["M"])}
-    verdict = decide(primary, sec, controls, manipulation_ok)
+    rule = decide(primary, sec, controls, manipulation_ok)
+    verdict = cap(rule)
     qualifiers = []
+    if verdict != rule:
+        qualifiers.append("The registered rule gives Supported, but attribution is untestable on this corpus: the "
+                          "judging guidelines reward neither currency nor study design (Amendment 3, C2).")
     if sec["M-L"]["p_holm"] < 0.05 and sec["M-L"]["mean"] < 0:
         qualifiers.append("A learned combination (L) beats the designed one (M).")
     if not (sec["M-Rbar"]["p_holm"] < 0.05 and sec["M-Rbar"]["mean"] > 0):
@@ -545,7 +581,7 @@ def analyze(A, manipulation_ok):
     means = {k: float(np.mean(v)) for k, v in A.items()}
     means.update({"N_bar": float(Nbar.mean()), "R_bar": float(Rbar.mean()), "P_bar": float(Pbar.mean())})
     return {"means": means, "primary_M_minus_B0": primary, "secondary_holm": sec, "controls": controls,
-            "verdict": verdict, "qualifiers": qualifiers}
+            "decision_rule_verdict": rule, "verdict": verdict, "qualifiers": qualifiers}
 
 
 def manipulation_check(topics, top10, evidence_varies):
@@ -669,6 +705,9 @@ def run(config_path, out, cache, test_mode=False, fake_encoder=False):
             t["collection"] = y["collection"]; topics.append(t)
     R["topics"] = {"n": len(topics), "by_type": dict(Counter(t["type"] for t in topics)),
                    "by_column": dict(Counter(str(t["column"]) for t in topics))}
+    mistyped = [t["qid"] for t in topics if t["type"] != expected_type(t["number"])]
+    if mistyped:
+        raise SystemExit(f"Topic types do not match their numbers (Amendment 3, C5): {mistyped[:5]}")
     unmapped = [t["qid"] for t in topics if t["column"] is None]
     if unmapped:
         raise SystemExit(f"Topics with a type outside diagnosis/test/treatment: {unmapped[:5]}")
@@ -831,6 +870,16 @@ def run(config_path, out, cache, test_mode=False, fake_encoder=False):
     # 11. Scores, statistics, verdict.
     A = {arm: np.array([ndcg_at_k(rankings[arm][q], qrels[q], K) for q in qids]) for arm in rankings}
     R.update(analyze(A, manip["passed"]))
+    # Amendment 3, C3: reported alongside, without changing the verdict.
+    A_cond = {arm: np.array([ndcg_at_k(condensed(rankings[arm][q], qrels[q]), qrels[q], K) for q in qids])
+              for arm in rankings}
+    cond = analyze(A_cond, manip["passed"])
+    R["unjudged_sensitivity"] = {
+        "judged_at_10": {arm: float(np.mean([judged_at_k(rankings[arm][q], qrels[q]) for q in qids])) for arm in rankings},
+        "condensed": {k: cond[k] for k in ("means", "primary_M_minus_B0", "decision_rule_verdict", "verdict")}}
+    q_cond = unjudged_qualifier(cond["verdict"], R["verdict"])
+    if q_cond:
+        R["qualifiers"].append(q_cond)
     R["p_noise_sd"] = noise_s
     R["runtime_seconds"] = round(time.time() - t0, 1)
     R["events"] = events
@@ -867,7 +916,9 @@ def write_report(R, path):
     m = R["preconditions"]["manipulation_check"]
     lines = [f"# Stage 1 results{' (TEST MODE, not a result)' if R['test_mode'] else ''}", "",
              "Generated by `stage1.py` from `results.json`. Do not edit by hand.", "",
-             f"**Verdict under the registered decision rule: {R['verdict']}.**", ""]
+             f"**Verdict under the registered decision rule: {R['verdict']}.**"
+             + ("" if R["verdict"] == R["decision_rule_verdict"] else
+                f" The rule itself gives {R['decision_rule_verdict']}; see the first qualifier."), ""]
     lines += [f"- {q}" for q in R["qualifiers"]]
     if R["L"]["boundary_limitation"]:
         lines.append("- L chose the smallest penalty in the grid in at least one fold; reported as a limitation (B1).")
@@ -887,8 +938,15 @@ def write_report(R, path):
               f"{R['primary_M_minus_B0']['p']:.4f} (uncorrected) |"]
     lines += [f"| {k} | {f4(v['mean'])} | {ci(v)} | {v['p_holm']:.4f} |" for k, v in R["secondary_holm"].items()]
     lines += [f"| {k} (control) | {f4(v['mean'])} | {ci(v)} | {v['p']:.4f} (uncorrected) |" for k, v in R["controls"].items()]
-    lines += ["", "## Means (NDCG@10)", "", "| Arm | NDCG@10 |", "|---|---|"]
-    lines += [f"| {k} | {v:.4f} |" for k, v in R["means"].items()]
+    u = R["unjudged_sensitivity"]
+    lines += ["", "## Means (NDCG@10)", "",
+              "Condensed: unjudged documents removed before scoring (Amendment 3, C3). Judged@10: share of the top 10 "
+              "that was judged.", "", "| Arm | NDCG@10 | Condensed | Judged@10 |", "|---|---|---|---|"]
+    lines += [f"| {k} | {v:.4f} | {u['condensed']['means'][k]:.4f} | "
+              + (f"{u['judged_at_10'][k]:.3f}" if k in u["judged_at_10"] else "") + " |" for k, v in R["means"].items()]
+    cp = u["condensed"]["primary_M_minus_B0"]
+    lines += ["", f"Condensed lists: M - B0 = {f4(cp['mean'])} {ci(cp)}; the decision rule gives "
+                  f"{u['condensed']['verdict']}."]
     with open(path, "w") as f:
         f.write("\n".join(lines) + "\n")
 
