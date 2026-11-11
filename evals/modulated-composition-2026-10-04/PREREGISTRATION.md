@@ -685,3 +685,9 @@ before any download. Publication types are fetched for the whole corpus, as B6 r
   - `check_stage1.py` passes all 131 checks, also in a fresh environment with the pinned
     versions. Mutation testing with nine new mutants aimed at these refusals: the checks
     failed on 41 of 42. The one they passed is the same equivalent mutant as before.
+- 2026-11-11: Amendment 3 committed in `3ce0787`, before any Stage 1 data were accessed.
+  Only the track's web pages and its three overview papers were downloaded. No topic file,
+  judgment file or collection was downloaded or opened.
+  - `check_stage1.py` passes all 140 checks.
+  - Mutation testing with ten new mutants aimed at C2, C3, C5 and C6: the checks failed on
+    51 of 52. The one they passed is the same equivalent mutant as before.
