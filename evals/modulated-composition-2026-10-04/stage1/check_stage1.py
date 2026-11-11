@@ -5,8 +5,9 @@ Checks for stage1.py. They must pass before any Stage 1 data are accessed (Amend
 
 1. Every branch of the decision rule, on constructed inputs, and the order of the rows.
 2. Synthetic result sets whose verdicts are known in advance: one where every prediction
-   holds (Supported), one where every prediction fails (Refuted), and two that must stop
-   earlier (Test failed, Untestable).
+   holds (the rule gives Supported, reported as Gain without attribution under Amendment 3,
+   C2), one where every prediction fails (Refuted), and two that must stop earlier (Test
+   failed, Untestable).
 3. The parsers, on hand-made files: NXML, topics in the 2014 and 2016 layouts, qrels and
    NCBI efetch XML.
 4. The A5 publication-type mapping.
@@ -138,12 +139,16 @@ def synthetic(kind, n=90, seed=1):
 
 def check_synthetic():
     good = S.analyze(synthetic("good"), True)
-    check("synthetic: every prediction holds -> Supported", good["verdict"] == "Supported", good["verdict"])
-    check("synthetic: Supported carries no qualifier", good["qualifiers"] == [], good["qualifiers"])
+    check("synthetic: every prediction holds -> the rule gives Supported",
+          good["decision_rule_verdict"] == "Supported", good["decision_rule_verdict"])
+    check("synthetic: ... reported as Gain without attribution, with the C2 qualifier only (Amendment 3)",
+          good["verdict"] == "Gain without attribution" and len(good["qualifiers"]) == 1 and "C2" in good["qualifiers"][0],
+          (good["verdict"], good["qualifiers"]))
     check("synthetic: the Holm family has the five A8 comparisons",
           list(good["secondary_holm"]) == ["M-F", "M-U", "M-V", "M-L", "M-Rbar"], list(good["secondary_holm"]))
     bad = S.analyze(synthetic("bad"), True)
-    check("synthetic: every prediction fails -> Refuted", bad["verdict"] == "Refuted", bad["verdict"])
+    check("synthetic: every prediction fails -> Refuted, uncapped",
+          bad["verdict"] == bad["decision_rule_verdict"] == "Refuted", bad["verdict"])
     check("synthetic: both qualifiers fire when L beats M and Rbar ties M", len(bad["qualifiers"]) == 2, bad["qualifiers"])
     A = synthetic("good")
     A.update({f"P{s}": A["M"] + np.random.default_rng(s).normal(0, 0.03, 90) for s in S.SEEDS})
@@ -290,6 +295,12 @@ def check_mapping():
              (["Case Reports"], EL.UNCONTROLLED_OBSERVATIONAL), (["Letter", "Case Reports"], EL.UNCONTROLLED_OBSERVATIONAL),
              (["Editorial"], EL.EXPERT_OPINION), (["Comment"], EL.EXPERT_OPINION), (["Letter"], EL.EXPERT_OPINION),
              (["Consensus Development Conference"], EL.EXPERT_OPINION),
+             (["Clinical Trial, Phase I"], EL.CONTROLLED_OBSERVATIONAL),
+             (["Clinical Trial, Phase II"], EL.CONTROLLED_OBSERVATIONAL),
+             (["Journal Article", "Clinical Trial, Phase III"], EL.CONTROLLED_OBSERVATIONAL),
+             (["Clinical Trial, Phase IV"], EL.CONTROLLED_OBSERVATIONAL),
+             (["Clinical Trial, Phase III", "Randomized Controlled Trial"], EL.RCT),
+             (["Clinical Trial Protocol"], None),
              (["Meta-Analysis", "Randomized Controlled Trial", "Editorial"], EL.SYSTEMATIC_REVIEW)]
     bad = [(c, S.pt_to_level(c), e) for c, e in cases if S.pt_to_level(c) != e]
     check(f"A5 mapping: {len(cases)} hand-written cases, the highest level applies", not bad, bad)
@@ -357,12 +368,29 @@ def check_helpers():
     check("gated: an off module contributes nothing", np.allclose(g, Z[[0, 1, 2, 3, 5]].sum(0)))
     check("temporal: a document with no date gets tau = 1 in F (B5)", temporal_decay(datetime(2014, 1, 21), datetime(2014, 1, 21)) == 1.0)
     check("L grid (B1)", S.LAMBDAS == [0.001, 0.01, 0.1, 1, 10], S.LAMBDAS)
+    rows = ["Test failed", "Refuted", "Untestable", "Supported", "Gain without attribution", "Inconclusive"]
+    check("cap: attribution untestable here (Amendment 3, C2)", S.ATTRIBUTION_TESTABLE is False)
+    check("cap: Supported becomes Gain without attribution; every other row is unchanged",
+          [S.cap(v, False) for v in rows] == ["Test failed", "Refuted", "Untestable", "Gain without attribution",
+                                             "Gain without attribution", "Inconclusive"]
+          and [S.cap(v, True) for v in rows] == rows)
+    judged = {"a": 1.0, "c": 0.0, "e": 2.0}
+    check("condensed: unjudged documents removed, order kept (C3)", S.condensed(list("abcdef"), judged) == ["a", "c", "e"])
+    check("judged@10: share of the top 10 with a judgment", S.judged_at_k(list("abcdefghijkl"), judged) == 0.3
+          and S.judged_at_k(list("ace"), judged, k=3) == 1.0)
+    check("condensed verdict: a qualifier when it differs, none when it agrees (C3)",
+          "Refuted" in (S.unjudged_qualifier("Refuted", "Inconclusive") or "") and S.unjudged_qualifier("Refuted", "Refuted") is None)
+    want = {1: "diagnosis", 10: "diagnosis", 11: "test", 20: "test", 21: "treatment", 30: "treatment", 0: None, 31: None}
+    check("topic types follow topic numbers in every year (C1, C5)",
+          all(S.expected_type(n) == t for n, t in want.items()) and S.expected_type("x") is None)
     ex = json.load(open(os.path.join(HERE, "CONFIG_EXAMPLE.json")))
-    check("CONFIG_EXAMPLE.json: has what run reads, and cannot run until the 2014 date is entered (B6)",
+    check("CONFIG_EXAMPLE.json: has what run reads, with the snapshot dates (C1) and the four-column qrels (C3)",
           {"nfcorpus", "years", "collections"} <= set(ex)
           and all({"topics", "qrels", "collection"} <= set(y) and y["collection"] in ex["collections"] for y in ex["years"].values())
           and all({"corpus", "pubtypes", "reference_date"} <= set(c) for c in ex["collections"].values())
-          and ex["collections"]["pmc-2014"]["reference_date"] == "", ex)
+          and [ex["years"][y]["collection"] for y in ("2014", "2015", "2016")] == ["pmc-2014", "pmc-2014", "pmc-2016"]
+          and {k: c["reference_date"] for k, c in ex["collections"].items()} == {"pmc-2014": "2014-01-21", "pmc-2016": "2016-03-28"}
+          and all("treceval" in y["qrels"] for y in ex["years"].values()), ex)
     G, cols = registered_gates()
     check("gate table: stage1.py's copy equals the registered table, columns in registered order",
           S.GATES == G and S.TYPES == cols and set(S.MODULES) == set(G["treatment"]), (S.GATES, G))
@@ -418,6 +446,9 @@ PUBTYPES = [["Journal Article"], ["Journal Article", "Randomized Controlled Tria
             ["Case Reports"], ["Editorial"], None]
 
 
+FIXTURE_TOPICS = [(1, "diagnosis"), (11, "test"), (21, "treatment"), (2, "diagnosis"), (12, "test"), (22, "treatment")]
+
+
 def make_collection(rng, n, base_id, dated_share, years):
     docs = []
     for i in range(n):
@@ -460,11 +491,10 @@ def write_fixture(root):
                     f.write(json.dumps({"pmid": d["pmid"], "types": PUBTYPES[rng.integers(len(PUBTYPES))]}) + "\n")
         S.write_meta(p, {"step": "fixture"})
 
-    types = ["diagnosis", "test", "treatment"] * 2
     topic_keys = iter(KEYS)
     for year, coll, layout in (("2014", c14, "2014"), ("2015", c14, "2014"), ("2016", c16, "2016")):
         topics, qrels = [], []
-        for n, kind in enumerate(types, start=1):
+        for n, kind in FIXTURE_TOPICS:
             key = next(topic_keys)
             summary = f"Patient with {' '.join(rng.choice(VOCAB, 4))} and suspected {key}."
             note = "<note>Admission note.</note>" if layout == "2016" else ""
@@ -517,9 +547,8 @@ def check_recomputed(out, R):
     Zs = np.load(os.path.join(out, "module_scores.npz"))
     runs = {a: read_trec(os.path.join(out, "runs", f"{a}.trec")) for a in ["B0", "M", "U", "V"] +
             [f"{x}{s}" for x in "NR" for s in S.SEEDS]}
-    types = ["diagnosis", "test", "treatment"] * 2  # the fixture's topics, numbered 1-6 in each year
-    col_of = {f"{y}-{n}": "treatment" if types[n - 1] == "treatment" else "diagnosis_test"
-              for y in ("2014", "2015", "2016") for n in range(1, 7)}
+    col_of = {f"{y}-{n}": "treatment" if kind == "treatment" else "diagnosis_test"
+              for y in ("2014", "2015", "2016") for n, kind in FIXTURE_TOPICS}
     off_of = {q: {"applicability"} | ({"temporal"} if q.startswith("2016") else set()) for q in col_of}  # A5, B5
 
     def rerank(q, gates):
@@ -615,6 +644,15 @@ def check_end_to_end():
         check("run: temporal on for full date coverage, off below 95% (B5)",
               dc["c2014"]["temporal_on"] and not dc["c2016"]["temporal_on"], dc)
         check("run: topics by column", R["topics"]["by_column"] == {"diagnosis_test": 12, "treatment": 6}, R["topics"])
+        u = R["unjudged_sensitivity"]
+        check("run: judged@10 for every arm, and some top-10 documents unjudged (C3)",
+              set(u["judged_at_10"]) == set(arms) and all(0 <= v <= 1 for v in u["judged_at_10"].values())
+              and min(u["judged_at_10"].values()) < 1, u["judged_at_10"])
+        check("run: condensed-list scores and verdict reported (C3)",
+              set(arms) <= set(u["condensed"]["means"]) and u["condensed"]["verdict"] in
+              ("Test failed", "Refuted", "Untestable", "Gain without attribution", "Inconclusive")
+              and all(u["condensed"]["means"][a] >= R["means"][a] - 1e-12 for a in arms)
+              and any(u["condensed"]["means"][a] > R["means"][a] + 1e-9 for a in arms), u["condensed"]["means"])
         ev = R["events"]
         idx = lambda s: next(i for i, e in enumerate(ev) if s in e)
         check("run: B3 order -- rankings saved, then the manipulation check, then judgments read",
@@ -670,6 +708,14 @@ def check_end_to_end():
                 "--test-mode", "--fake-encoder")
         check("refusal: a corpus whose checksum does not match its metadata (B6)",
               r.returncode != 0 and "does not match" in r.stderr, r.stderr[-400:])
+        mistyped = os.path.join(root, "topics2015_mistyped.xml")
+        open(mistyped, "w").write(open(os.path.join(root, "topics2015.xml")).read()
+                                  .replace('number="1" type="diagnosis"', 'number="1" type="treatment"'))
+        bad = json.loads(json.dumps(cfg)); bad["years"]["2015"]["topics"] = "topics2015_mistyped.xml"
+        r = cli("run", "--config", write_cfg(root, bad, "bad0.json"), "--out", os.path.join(root, "o0"), "--cache", cache,
+                "--test-mode", "--fake-encoder")
+        check("refusal: a topic whose type does not match its number (C5)",
+              r.returncode != 0 and "do not match their numbers" in r.stderr and "2015-1" in r.stderr, r.stderr[-400:])
         bad = json.loads(json.dumps(cfg)); bad["collections"]["c2016"]["reference_date"] = ""
         r = cli("run", "--config", write_cfg(root, bad, "bad2.json"), "--out", os.path.join(root, "o6"), "--cache", cache,
                 "--test-mode", "--fake-encoder")
